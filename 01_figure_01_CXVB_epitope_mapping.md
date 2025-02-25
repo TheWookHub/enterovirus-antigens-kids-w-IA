@@ -107,7 +107,8 @@ endia_fc <- calculate_rpk_fold_change(endia_virscan_onset, sample_id, condition,
 endia_ms <- calculate_moving_sum(endia_fc, value_column = fold_change, win_size = 32, step_size = 4)
 
 endia_ms_plot <- endia_ms %>% 
-  ms_plot_clean() 
+  ms_plot_clean() +
+  ggtitle("ENDIA")
 ```
 
 ### VIGR
@@ -157,7 +158,8 @@ vigr_fc <- calculate_rpk_fold_change(vigr_virscan_metadata, sample_id, Condition
 vigr_ms <- calculate_moving_sum(vigr_fc, value_column = fold_change, win_size = 32, step_size = 4)
 
 vigr_ms_plot <- vigr_ms %>% 
-  ms_plot_clean()
+  ms_plot_clean() +
+  ggtitle("VIGR")
 ```
 
 ## Comparison of epitope landscape per case
@@ -200,6 +202,30 @@ figure_1 <- wrap_elements(combined_ms_plots) +
 
 ![](01_figure_01_CXVB_epitope_mapping_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
 
+**Figure 1:** Comparison of enterovirus epitope landscapes in children
+with islet autoimmunity versus controls in two cohorts, VIGR (top) and
+ENDIA (bottom). Enterovirus-specific epitopes were measured for IgG/IgA
+antibody binding (binding 56- mer linear peptides displayed by the
+comprehensive VirScan T7 bacteriophage library covering all known human
+virus peptidome) in children with persistent islet autoimmunity (Stage 2
+type 1 diabetes), followed in two different Australian prospective
+cohorts (VIGR and ENDIA). Antibody-bound epitope positions were mapped
+to the genome polyprotein of a well characterised enterovirus reference
+sequence (CVB1 polyprotein; UniProt: P08291). Plasma samples were
+collected at the time of persistent islet autoimmunity onset (positivity
+for at least one type of islet autoantibody in two consecutive study
+visits held 3 months apart). Controls were matched based on age and sex,
+and the time of sample collection. To compare targeting antibody
+abundance between cases (purple) and controls (green) at each epitope
+position, the moving sum of the difference between the mean reads per
+thousand (RPK) were calculated between cases vs controls, with a window
+size of 32 amino acids incremented by steps of 4 amino acids. Above 0 in
+y-axis demonstrates epitope enrichment in cases compared to controls,
+meaning that more antibodies targeting these regions of the genome
+polyprotein of enteroviruses exist in children with islet autoimmunity
+vs controls. Conversely, negative peaks demonstrate enrichment in
+controls vs cases.
+
 ## Supplementary information :heavy_plus_sign:
 
 <details>
@@ -233,8 +259,8 @@ endia_fc_plot <- endia_fc %>%
     ggtitle("ENDIA")
 
 combined_fc_plots <- wrap_plots(EV_B1_plot,
-                                endia_fc_plot,
-                                vigr_fc_plot + labs(x = "Position in sequence (amino acids)") + theme(legend.position = "bottom"),
+                                vigr_fc_plot,
+                                endia_fc_plot + labs(x = "Position in sequence (amino acids)") + theme(legend.position = "bottom"),
                                                      ncol = 1, heights = c(0.3, 3, 3)) &
   theme(plot.margin = margin(5.5, 5.5, 5.5, 0),
         plot.title = element_text(size = 10)) 

@@ -200,52 +200,54 @@ figure_1 <- wrap_elements(combined_ms_plots) +
 
 ![](01_figure_01_CXVB_epitope_mapping_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
 
-\*TODO: move this to its own Rmd (03_stratify_by_age_and_sex.Rmd) or
-\_by_age_sex_and_nest\*
+## Supplementary information :heavy_plus_sign:
 
-## Sex stratification in both cohorts
+<details>
+<summary>
+<i> Figure 1 using `fold_change` instead of `moving_sum` </i>
+</summary>
 
 ``` r
-endia_sex_stratified <- endia_virscan_onset %>%
-  group_by(infant_sex) %>% 
-  group_map(~ .x %>%
-    calculate_rpk_fold_change(sample_id, condition, pep_id, abundance, ENDIA_blastp_evB1) %>%
-    calculate_moving_sum(fold_change, 32, 4) %>%
-    ms_plot_clean() + 
-      ggtitle(paste("Sex:", unique(.x$infant_sex), "- Sample count:", length(unique(.x$sample_id)))) +
-      theme(
-        plot.title = element_text(size = 10)
-      ),
-    .keep = TRUE
-  )
+vigr_fc_plot <- vigr_fc %>%
+    mutate(Condition = if_else(fold_change > 0, "Case", "Control")) %>% 
+    ggplot(aes(x = (start + end) / 2, y = fold_change, fill = Condition)) +
+    geom_bar(stat = "identity") +
+    labs(x = "", fill = "", y = "") +
+    theme_minimal() +
+    theme(panel.grid.minor = element_blank(),
+          panel.grid.major = element_blank()) +
+    scale_fill_manual(values = c("Case" = "#d73027", "Control" = "#4575b4"), labels = c("Case", "Control")) +
+    theme(legend.position = "none") +
+    ggtitle("VIGR")
 
-vigr_sex_stratified <- vigr_virscan_metadata %>%
-  group_by(Sex) %>% 
-  group_map(~ .x %>%
-    calculate_rpk_fold_change(sample_id, Condition, pep_id, abundance, VIGR_blastp_evB1) %>%
-    calculate_moving_sum(fold_change, 32, 4) %>%
-    ms_plot_clean() + 
-      ggtitle(paste("Sex:", unique(.x$Sex), "- Sample count:", length(unique(.x$sample_id)))) +
-      theme(
-        plot.title = element_text(size = 10)
-      ),
-    .keep = TRUE
-  )
+endia_fc_plot <- endia_fc %>%
+    mutate(Condition = if_else(fold_change > 0, "Case", "Control")) %>% 
+    ggplot(aes(x = (start + end) / 2, y = fold_change, fill = Condition)) +
+    geom_bar(stat = "identity") +
+    labs(x = "", fill = "", y = "") +
+    theme_minimal() +
+    theme(panel.grid.minor = element_blank(),
+          panel.grid.major = element_blank()) +
+    scale_fill_manual(values = c("Case" = "#d73027", "Control" = "#4575b4"), labels = c("Case", "Control")) +
+    theme(legend.position = "none") +
+    ggtitle("ENDIA")
 
-vigr_plots <- wrap_plots(EV_B1_plot + ggtitle("VIGR"), wrap_plots(vigr_sex_stratified, ncol = 1) +
-             labs(x = "Position in sequence (amino acids)")  + theme(legend.position = "bottom"), ncol = 1, heights = c(0.3, 3)) &
-  theme(plot.margin = margin(5.5, 5.5, 5.5, 0))
+combined_fc_plots <- wrap_plots(EV_B1_plot,
+                                endia_fc_plot,
+                                vigr_fc_plot + labs(x = "Position in sequence (amino acids)") + theme(legend.position = "bottom"),
+                                                     ncol = 1, heights = c(0.3, 3, 3)) &
+  theme(plot.margin = margin(5.5, 5.5, 5.5, 0),
+        plot.title = element_text(size = 10)) 
 
-endia_plots <- wrap_plots(EV_B1_plot + ggtitle("ENDIA"), wrap_plots(endia_sex_stratified, ncol = 1) +
-             labs(x = "Position in sequence (amino acids)") + theme(legend.position = "bottom"), ncol = 1, heights = c(0.3, 3)) 
-
-cohorts_sex_plot <- wrap_plots(vigr_plots, endia_plots)
-
-cohorts_sex_plot_with_yaxis <- wrap_elements(cohorts_sex_plot) +
-  labs(tag = expression(sum((bar(X)[rpk_cases] - bar(X)[rpk_controls])))) +
+wrap_elements(combined_fc_plots) +
+  geom_vline(xintercept = 848.5, linetype = "dashed", linewidth = 0.2) +
+  labs(tag = expression(bar(X)[rpk_cases] - bar(X)[rpk_controls])) +
   theme(
     plot.tag = element_text(size = rel(1), angle = 90),
-    plot.tag.position = "left")
+    plot.tag.position = "left"
+  )
 ```
 
-![](01_figure_01_CXVB_epitope_mapping_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
+![](01_figure_01_CXVB_epitope_mapping_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
+
+</details>

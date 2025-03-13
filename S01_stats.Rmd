@@ -1,0 +1,524 @@
+---
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, options(readr.show_col_types = FALSE))
+```
+
+```{r}
+library(tidyverse)
+library(ampir)
+library(patchwork)
+library(lme4)
+library(broom.mixed)
+```
+
+*TODO:* 
+
+- move functions to scripts
+- combine fit_glm function for VIGR and ENDIA into a single function
+- Try negative binomial model (with potential zero inflation) for ENDIA
+- Tidy up :broom:
+- attend other TODO notes spread in this Rmd
+
+```{r}
+endia_virscan_onset <- read_rds("cache/endia_virscan_metadata.rds") %>% 
+  filter(onset_visit == 1) %>% 
+  group_by(sample_id) %>% 
+  mutate(rpk = abundance / sum(abundance) * 100000) %>% 
+  ungroup()
+
+vigr_virscan_metadata <- read_rds("cache/vigr_virscan_metadata.rds") %>% 
+  mutate(Nest = str_extract(sample_id, "\\d+")) %>% 
+  group_by(sample_id) %>% 
+  mutate(rpk = abundance / sum(abundance) * 100000) %>% 
+  ungroup()
+```
+
+### ENDIA
+
+Quick plot to show the abundance in cases and controls for all genera
+
+```{r, fig.width=8, fig.height=8}
+endia_virscan_onset %>%
+  group_by(taxon_genus, condition) %>%
+  summarise(total_rpk = sum(rpk, na.rm = TRUE), .groups = "drop") %>% 
+  ggplot(aes(x = taxon_genus, y = total_rpk, fill = condition), alpha = 0.5) +
+  coord_flip() +
+  geom_col(position = "dodge") +
+  scale_fill_manual(values = c("Case" = "#d73027", "Control" = "#4575b4"), labels = c("Case", "Control")) +
+  labs(x = "Genus", y = "Total abundance per genus") +
+  theme_classic()
+```
+
+### Statistical comparison of the abundance of multiple genera between case and control
+
+Get top most abundant genera in cases and controls
+
+```{r}
+endia_top_genera_in_both_conditions <- endia_virscan_onset %>%
+  group_by(condition, taxon_genus) %>%
+  summarise(genus_rpk = sum(rpk, na.rm = TRUE), .groups = "drop") %>%
+  group_by(condition) %>%
+  slice_max(genus_rpk, n = 30) %>%  # get top 30 abundant genera per condition
+  ungroup() %>%
+  semi_join(            # keep only genera that appear in both conditions' top 30
+    count(., taxon_genus) %>% filter(n == 2), 
+    by = "taxon_genus"
+  ) %>%
+  group_by(taxon_genus) %>%
+  mutate(total_rpk_overall = sum(genus_rpk)) %>% # get total abundance for both conditions combined per genus
+  ungroup() %>%
+  arrange(desc(total_rpk_overall), taxon_genus, condition) # arrange so top most abundant genera are first
+```
+
+```{r}
+endia_top_genera_in_both_conditions
+```
+
+Extract the VirScan data for the most abundant genera 
+```{r}
+endia_top_genera <- endia_top_genera_in_both_conditions %>% pull(taxon_genus) %>% unique()
+
+endia_top_genera_onset <- endia_virscan_onset %>% 
+  group_by(sample_id, taxon_genus) %>% 
+  mutate(genus_rpk = sum(rpk)) %>% 
+  ungroup() %>% 
+  distinct(taxon_genus, sample_id, .keep_all = TRUE) %>% 
+  select(sample_id, case, condition, taxon_genus, genus_rpk, infant_id, mother_id, 
+         deidentified_nest_id_new, age_at_sample_collection_days, infant_sex,
+         infant_HLA, weightTEDDY) %>% 
+ mutate(age_sample_collection_month = age_at_sample_collection_days / 365 * 12) %>% 
+ filter(taxon_genus %in% endia_top_genera) # filter to only include top genera
+```
+
+```{r}
+# Function to fit a GLM model for a single genus 
+run_glms_on_genera_endia <- function(df) {
+  
+  unique_genera <- df %>% pull(taxon_genus) %>% unique()
+  
+   map(set_names(unique_genera), function(genus) {
+    single_genus_data <- df %>% filter(taxon_genus == genus)
+    
+    glmer(
+      formula = case ~ log_genus_rpk + infant_HLA + age_sample_collection_month + infant_sex + (1|deidentified_nest_id_new) + (1|mother_id),
+      data = single_genus_data,
+      family = poisson(link = "log"),
+      weights = weightTEDDY,
+      control = glmerControl(optimizer = "nloptwrap", optCtrl = list(maxfun = 2e5))
+    )
+  })
+}
+
+# Function to extract and tidy GLM results
+
+tidy_glm_results <- function(glm_list) {
+  tidy_glm_results_list <- map(names(glm_list), function(genus) {
+    broom.mixed::tidy(glm_list[[genus]], effects = "fixed", conf.int = TRUE, exponentiate = TRUE) %>%
+      filter(term == "log_genus_rpk") %>%
+      mutate(genus = genus, .before = effect) %>% 
+      rename(risk_ratio = estimate,
+         ci_low = conf.low,
+         ci_high = conf.high)
+  })
+  
+  # combine results into a single dataframe and apply multiple testing correction
+  list_rbind(tidy_glm_results_list) %>%
+    mutate(p_adjust_BH = p.adjust(p.value, method = "BH")) 
+}
+```
+
+Test on enterovirus and mastadenovirus, works ok. 
+```{r}
+top_genera <- c("Enterovirus", "Mastadenovirus")
+
+endia_top_genera_onset_log_rpk <- endia_top_genera_onset %>% 
+    mutate(log_genus_rpk = log(genus_rpk + 1)) %>% 
+    mutate(across(c(infant_HLA, infant_id, mother_id, deidentified_nest_id_new, infant_sex), as.factor)) %>% 
+  filter(taxon_genus %in% top_genera)
+
+endia_genera_glms <- run_glms_on_genera_endia(endia_top_genera_onset_log_rpk)
+
+tidy_glm_results(endia_genera_glms)
+```
+
+Using all top genera
+
+```{r}
+endia_all_top_genera_onset_log_rpk <- endia_top_genera_onset %>% 
+    mutate(log_genus_rpk = log(genus_rpk + 1)) %>% 
+    mutate(across(c(infant_HLA, infant_id, mother_id, deidentified_nest_id_new, infant_sex), as.factor))
+```
+
+Plot to show distribution of values (log transformed for GLM)
+
+```{r, fig.width=8, fig.height=8}
+endia_all_top_genera_onset_log_rpk %>%
+  ggplot(aes(x = log_genus_rpk, colour = condition), alpha = 0.5) +
+  geom_density() +
+  scale_colour_manual(values = c("Case" = "#d73027", "Control" = "#4575b4"), labels = c("Case", "Control")) +
+  labs(x = "log_genus_rpk", y = "Density") +
+  theme_classic() +
+  facet_wrap(~taxon_genus)
+```
+
+*TODO:* 3 models failed to converge so must fix that.
+*TODO:* perhaps add column with the warnings in output for each genus
+
+```{r}
+endia_top_genera_glms <- run_glms_on_genera_endia(endia_all_top_genera_onset_log_rpk)
+
+endia_top_genera_glms_tidy <- tidy_glm_results(endia_top_genera_glms)
+
+endia_top_genera_glms_tidy
+```
+
+
+```{r}
+endia_top_genera_glms_tidy %>% 
+  mutate(genus_w_pvalue = paste(genus, "(",round(p_adjust_BH, digits = 2),")")) %>% 
+  arrange(desc(risk_ratio)) %>% 
+  mutate(genus_w_pvalue = factor(genus_w_pvalue, levels = rev(unique(genus_w_pvalue)))) %>% 
+  ggplot(aes(x = risk_ratio, y = genus_w_pvalue)) +
+  geom_point(color = "black") +
+  geom_errorbarh(aes(xmin = ci_low, xmax = ci_high), height = 0.2, color = "black") +
+  geom_vline(xintercept = 1, linetype = "dashed", color = "red") + # Reference line
+  theme_minimal() +
+  labs(x = "Risk Ratio", y = "Genus and adjusted BH P value") +
+  theme(axis.text.y = element_text(size = 10, face = "italic")) 
+
+```
+
+RR > 1 = increased risk
+RR < 1 = decreased risk
+RR = 1 = no effect (H0)
+
+### VIGR
+
+```{r}
+vigr_top_genera_in_both_conditions <- vigr_virscan_metadata %>% 
+  group_by(Condition, taxon_genus) %>%
+  summarise(genus_rpk = sum(rpk, na.rm = TRUE), .groups = "drop") %>%
+  group_by(Condition) %>%
+  slice_max(genus_rpk, n = 30) %>%  # get top 30 abundant genera per condition
+  ungroup() %>%
+  semi_join(            # keep only genera that appear in both conditions' top 30
+    count(., taxon_genus) %>% filter(n == 2), 
+    by = "taxon_genus"
+  ) %>%
+  group_by(taxon_genus) %>%
+  mutate(total_rpk_overall = sum(genus_rpk)) %>% # get total abundance for both conditions combined per genus
+  ungroup() %>%
+  arrange(desc(total_rpk_overall), taxon_genus, Condition) %>% # arrange so top most abundant genera are first
+  filter(!is.na(taxon_genus)) #remove abundant NA taxon_genus
+
+vigr_top_genera <- vigr_top_genera_in_both_conditions %>% pull(taxon_genus) %>% unique()
+
+vigr_top_genera_virscan_log_rpk <- vigr_virscan_metadata %>% 
+  group_by(sample_id, taxon_genus) %>% 
+  mutate(genus_rpk = sum(rpk)) %>% 
+  ungroup() %>% 
+  distinct(taxon_genus, sample_id, .keep_all = TRUE) %>% 
+  select(Condition, genus_rpk, sample_id, taxon_genus, 
+         Nest, Age, Sex, HLA_Status, My_name) %>% 
+ filter(taxon_genus %in% vigr_top_genera) %>%  # filter to only include top genera
+ mutate(case = ifelse(Condition == "Case", 1, 0),
+        log_genus_rpk = log(genus_rpk + 1),
+        across(c(HLA_Status, Sex, Nest, My_name), as.factor))
+```
+
+Crazy spike for enterovirus again at high `log_rpk`
+
+```{r, fig.width=8, fig.height=8}
+vigr_top_genera_virscan_log_rpk %>%
+  ggplot(aes(x = log_genus_rpk, colour = Condition), alpha = 0.5) +
+  geom_density() +
+  scale_colour_manual(values = c("Case" = "#d73027", "Control" = "#4575b4"), labels = c("Case", "Control")) +
+  labs(x = "log_genus_rpk", y = "Density") +
+  theme_classic() +
+  facet_wrap(~taxon_genus)
+```
+
+```{r}
+run_glms_on_genera_vigr <- function(df) {
+  
+  unique_genera <- df %>% pull(taxon_genus) %>% unique()
+  
+   map(set_names(unique_genera), function(genus) {
+    single_genus_data <- df %>% filter(taxon_genus == genus)
+    
+    glmer(
+      formula = case ~ log_genus_rpk + HLA_Status + Age + Sex + (1|Nest) + (1|My_name),
+      data = single_genus_data,
+      family = poisson(link = "log"),
+      control = glmerControl(optimizer = "nloptwrap", optCtrl = list(maxfun = 2e5))
+    )
+  })
+}
+
+vigr_top_genera_glms <- run_glms_on_genera_vigr(vigr_top_genera_virscan_log_rpk)
+
+vigr_top_genera_glms_tidy <- tidy_glm_results(vigr_top_genera_glms)
+
+vigr_top_genera_glms_tidy
+```
+
+:construction:
+
+Really wide CI for enterovirus, why?
+
+```{r}
+vigr_top_genera_glms_tidy %>% 
+  mutate(genus_w_pvalue = paste(genus, "(",round(p_adjust_BH, digits = 2),")")) %>% 
+  arrange(desc(risk_ratio)) %>% 
+  mutate(genus_w_pvalue = factor(genus_w_pvalue, levels = rev(unique(genus_w_pvalue)))) %>% 
+  ggplot(aes(x = risk_ratio, y = genus_w_pvalue)) +
+  geom_point(color = "black") +
+  geom_errorbarh(aes(xmin = ci_low, xmax = ci_high), height = 0.2, color = "black") +
+  geom_vline(xintercept = 1, linetype = "dashed", color = "red") + # Reference line
+  theme_minimal() +
+  labs(x = "Risk Ratio", y = "Genus and adjusted BH P value") +
+  theme(axis.text.y = element_text(size = 10, face = "italic")) 
+```
+
+
+
+Testing binomial and poisson for VIGR. Interesting the AIC is lower for Binomial but the confidence intervals are a lot wider for Binomial. Also, speaking of which, the CI for the Intercept in both models is huge
+
+```{r}
+ev_virscan_genus_rpk <- vigr_top_genera_virscan_log_rpk %>% filter(taxon_genus == "Enterovirus")
+
+vigr_model_binomial <- glmer(case ~ log_genus_rpk + HLA_Status + Age + Sex + (1|Nest) + (1|My_name), data = ev_virscan_genus_rpk, family = binomial(link = "logit"), control = glmerControl(optimizer = "nloptwrap", optCtrl = list(maxfun = 2e5)))
+
+vigr_model_poisson <- glmer(formula = case ~ log_genus_rpk + HLA_Status + Age + Sex + (1|Nest) + (1|My_name), data = ev_virscan_genus_rpk,
+      family = poisson(link = "log"),
+      control = glmerControl(optimizer = "nloptwrap", optCtrl = list(maxfun = 2e5)))
+
+vigr_model_binomial %>% tidy(conf.int = TRUE, exponentiate = TRUE)
+vigr_model_poisson %>% tidy(conf.int = TRUE, exponentiate = TRUE)
+
+AIC(vigr_model_binomial, vigr_model_poisson)
+```
+
+:construction:  :construction:  :construction: 
+
+trying with neg. binom, no better in VIGR (*TODO*: try with ENDIA)
+Maybe add dispersion variable with `dispformula` ? 
+
+```{r}
+library(glmmTMB)
+
+vigr_model_neg_binom <- glmmTMB(case ~ log_genus_rpk + HLA_Status + Age + Sex + (1|Nest) + (1|My_name),
+                                family = "nbinom2",
+                                data = ev_virscan_genus_rpk)
+
+vigr_model_neg_binom %>% tidy(conf.int = TRUE, exponentiate = TRUE)
+
+AIC(vigr_model_neg_binom, vigr_model_binomial, vigr_model_poisson)
+
+# convergence problem if adding zero convergence
+vigr_model_neg_binom_zi <- glmmTMB(case ~ log_genus_rpk + HLA_Status + Age + Sex + (1|Nest) + (1|My_name),
+                                   family = "nbinom2",
+                                   data = ev_virscan_genus_rpk,
+                                   ziformula = ~1)
+```
+
+-------------------------------------------------------------------------------
+
+## Basic descriptive stats for total antibody response per genus in both cohorts :white_check_mark:
+
+Get most total number of peptides per genus and percentage of the total
+
+**VIGR**
+
+```{r}
+vigr_virscan_metadata %>% 
+  group_by(taxon_genus, Condition) %>%
+  summarise(total_abundance = sum(abundance)) %>%
+  ungroup() %>% 
+  mutate(percentage = total_abundance / sum(total_abundance) * 100) %>% 
+  ungroup() %>% 
+  arrange(desc(percentage)) %>% 
+  mutate(percentage = as.integer(percentage))
+```
+
+**ENDIA**
+
+```{r}
+endia_virscan_onset %>% 
+   group_by(taxon_genus, condition) %>%
+  summarise(total_abundance = sum(abundance)) %>%
+  ungroup() %>% 
+  mutate(percentage = total_abundance / sum(total_abundance) * 100) %>% 
+  ungroup() %>% 
+  arrange(desc(percentage)) %>% 
+  mutate(percentage = as.integer(percentage))
+```
+
+Get minimum and maximum abundance values across samples for the *Enterovirus* genus 
+
+**VIGR**
+
+```{r}
+vigr_virscan_metadata %>% 
+  group_by(sample_id) %>% 
+  mutate(total_peps = sum(abundance)) %>% 
+  filter(taxon_genus == "Enterovirus") %>%
+  mutate(no_peps = sum(abundance) / total_peps * 100) %>%
+  ungroup() %>% 
+  group_by(Condition) %>% 
+  summarise(
+    max_value = max(no_peps), 
+    min_value = min(no_peps)
+  ) %>% 
+  ungroup()
+```
+
+**ENDIA**
+
+```{r}
+endia_virscan_onset %>% 
+    group_by(sample_id) %>% 
+  mutate(total_peps = sum(abundance)) %>% 
+  filter(taxon_genus == "Enterovirus") %>%
+  mutate(no_peps = sum(abundance) / total_peps * 100) %>%
+  ungroup() %>% 
+  group_by(condition) %>% 
+  summarise(
+    max_value = max(no_peps), 
+    min_value = min(no_peps)
+  ) %>% 
+  ungroup()
+```
+
+Check ages in samples with lowest and highest peptide percentage 
+
+**VIGR**
+
+```{r}
+vigr_virscan_metadata %>% 
+  group_by(sample_id) %>% 
+  mutate(total_peps = sum(abundance)) %>% 
+  filter(taxon_genus == "Enterovirus") %>%
+  mutate(no_peps = sum(abundance) / total_peps * 100) %>%
+  ungroup() %>% 
+  filter(no_peps < 30 | no_peps > 75) %>% 
+  select(sample_id, Condition, Age, no_peps) %>% 
+  distinct(sample_id, .keep_all = TRUE) %>% 
+  arrange(no_peps)
+```
+
+**ENDIA**
+
+```{r}
+endia_virscan_onset %>% 
+  group_by(sample_id) %>% 
+  mutate(total_peps = sum(abundance)) %>% 
+  filter(taxon_genus == "Enterovirus") %>%
+  mutate(no_peps = sum(abundance) / total_peps * 100) %>%
+  ungroup() %>% 
+  filter(no_peps == 0 | no_peps > 95) %>% 
+  mutate(age_years = age_at_sample_collection_days / 365) %>% 
+  select(sample_id, condition, age_years, no_peps) %>% 
+  distinct(sample_id, .keep_all = TRUE) %>% 
+  arrange(no_peps)
+```
+
+### snippets :scissors:
+
+Comparing top abundant vs top normalised abundant (rpk) 
+
+```{r}
+endia_top_rpk_in_both_conditions <- endia_virscan_onset %>%
+  group_by(taxon_genus, condition) %>%
+  summarise(total_rpk = sum(rpk, na.rm = TRUE), .groups = "drop") %>%
+  group_by(condition) %>%
+  slice_max(total_rpk, n = 30) %>%  # get top 30 abundant genera per condition
+  ungroup() %>%
+  semi_join(            # keep only genera that appear in both conditions' top 30
+    count(., taxon_genus) %>% filter(n == 2), 
+    by = "taxon_genus"
+  ) %>%
+  group_by(taxon_genus) %>%
+  mutate(total_rpk_overall = sum(total_rpk)) %>% # get total abundance for both conditions combined per genus
+  ungroup() %>%
+  arrange(desc(total_rpk_overall), taxon_genus, condition) #%>% # arrange so top most abundant genera are first
+
+endia_top_abundant_in_both_conditions <- endia_virscan_onset %>%
+  group_by(taxon_genus, condition) %>%
+  summarise(total_abundance = sum(abundance, na.rm = TRUE), .groups = "drop") %>%
+  group_by(condition) %>%
+  slice_max(total_abundance, n = 30) %>%  # get top 30 abundant genera per condition
+  ungroup() %>%
+  semi_join(            # keep only genera that appear in both conditions' top 30
+    count(., taxon_genus) %>% filter(n == 2), 
+    by = "taxon_genus"
+  ) %>%
+  group_by(taxon_genus) %>%
+  mutate(total_abundance_overall = sum(total_abundance)) %>% # get total abundance for both conditions combined per genus
+  ungroup() %>%
+  arrange(desc(total_abundance_overall), taxon_genus, condition) #%>% # arrange so top most abundant genera are first
+
+setdiff(endia_top_rpk_in_both_conditions$taxon_genus, endia_top_abundant_in_both_conditions$taxon_genus )
+```
+
+Snippet:
+
+Alternative way of adding p values
+
+```{r, fig.width=10}
+vigr_top_genera_glms_tidy %>% 
+  arrange(desc(risk_ratio)) %>% 
+  mutate(genus_w_pvalue = factor(genus, levels = rev(unique(genus)))) %>% 
+  ggplot(aes(x = risk_ratio, y = genus)) +
+  geom_point(color = "black") +
+  geom_errorbarh(aes(xmin = ci_low, xmax = ci_high), height = 0.2, color = "black") +
+  geom_vline(xintercept = 1, linetype = "dashed", color = "red") + # Reference line
+  theme_minimal() +
+  labs(x = "Risk Ratio", y = "Genus") +
+  theme(axis.text.y = element_text(size = 10)) +
+  annotate("text", x = min(vigr_top_genera_glms_tidy$risk_ratio) - 0.4, y = vigr_top_genera_glms_tidy$genus, 
+           label = paste0("(", round(vigr_top_genera_glms_tidy$p_adjust_BH, 3), ")"), 
+           hjust = 1, fontface = "italic", size = 3)  # Adjust size manually
+```
+
+
+
+
+
+Snippet:
+
+Export present genera in both cohorts plus their abundance to a table
+
+```{r}
+endia_genera_present_plus_rpk <- endia_virscan_onset %>%
+  group_by(condition, taxon_genus) %>%
+  summarise(genus_rpk = sum(rpk, na.rm = TRUE), .groups = "drop") %>%
+  group_by(taxon_genus) %>%
+  mutate(total_rpk_overall = sum(genus_rpk)) %>% # get total abundance for both conditions combined per genus
+  ungroup() %>%
+  arrange(desc(total_rpk_overall), taxon_genus, condition) %>%  # arrange so top most abundant genera are first
+  add_column(cohort = "ENDIA")
+
+vigr_genera_present_plus_rpk <- vigr_virscan_metadata %>% 
+  group_by(Condition, taxon_genus) %>%
+  summarise(genus_rpk = sum(rpk, na.rm = TRUE), .groups = "drop") %>%
+  group_by(taxon_genus) %>%
+  mutate(total_rpk_overall = sum(genus_rpk)) %>% # get total abundance for both conditions combined per genus
+  ungroup() %>%
+  arrange(desc(total_rpk_overall), taxon_genus, Condition) %>% # arrange so top most abundant genera are first
+  add_column(cohort = "VIGR")
+
+
+write_tsv(endia_genera_present_plus_rpk, "cache/endia_genera_plus_rpk.tsv")
+write_tsv(vigr_genera_present_plus_rpk, "cache/vigr_genera_plus_rpk.tsv")
+
+# sanity check
+endia_genera_present_plus_rpk %>% pull(taxon_genus) %>% unique() %>% length()
+vigr_genera_present_plus_rpk  %>% pull(taxon_genus) %>% unique() %>% length()
+
+vigr_virscan_metadata %>% filter(!is.na(taxon_genus)) %>%  pull(taxon_genus) %>% unique() %>% length()
+endia_virscan_onset %>% filter(!is.na(taxon_genus)) %>% pull(taxon_genus) %>% unique() %>% length()
+```

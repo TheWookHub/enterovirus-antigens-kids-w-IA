@@ -1,0 +1,317 @@
+
+# Testing significance of the peaks in the 3D region and VP1 region
+
+``` r
+library(tidyverse)
+library(ampir)
+library(patchwork)
+source("scripts/read_blast.R")
+source("scripts/calculate_rpk_fold_change.R")
+source("scripts/calculate_moving_sum.R")
+```
+
+Read in Cohort datasets generated in
+`01_figure_01_CXVB_epitope_mapping.Rmd`
+
+``` r
+endia_virscan_onset <- read_rds("cache/endia_virscan_metadata.rds") %>% 
+  filter(onset_visit == 1)
+
+ENDIA_blastp_evB1 <- read_blast("raw_data/blast_results/blastp_endia_evB1_all_virscan_peps.blast")
+
+vigr_virscan_metadata <- read_rds("cache/vigr_virscan_metadata.rds") %>% 
+  mutate(Nest = str_extract(sample_id, "\\d+"))
+
+VIGR_blastp_evB1 <- read_blast("raw_data/blast_results/blastp_vigr_evB1_all_virscan_peps.blast")
+```
+
+## Test peak significance in the 3D region
+
+The 3D peak region of interest was obtained from
+`02_figure_02_alignments.Rmd`
+
+\#- `start`: 16 = `window_start`: 1737 \#1735 for ENDIA \#- `end`: 33 =
+`window_start`: 1754
+
+**VIGR**
+
+Plot per nest
+
+``` r
+ms_plot_clean_3d_peak_annot <- function(moving_sum_dataframe){
+  #plot without x axis label or legend position for easier plot stacking
+  moving_sum_dataframe %>% 
+    distinct(window_start, .keep_all = TRUE) %>% #remove duplicate windows to avoid overstacking
+    mutate(Condition = if_else(moving_sum > 0, "Case", "Control")) %>% 
+    ggplot(aes(x = (window_start + window_end) / 2, y = moving_sum, fill = Condition)) +
+    geom_rect(aes(xmin = 1737, xmax = 1754, ymin = -Inf, ymax = Inf), fill = "gray", alpha = 0.3) +
+    geom_bar(stat = "identity") +
+    labs(x = "", fill = "", y = "") +
+    theme_minimal() +
+    theme(panel.grid.minor = element_blank(),
+          panel.grid.major = element_blank()) +
+    scale_fill_manual(values = c("Case" = "#d73027", "Control" = "#4575b4"), labels = c("Case", "Control")) +
+    theme(legend.position = "none")
+}
+```
+
+``` r
+VIGR_signal_per_nest_plots <- vigr_virscan_metadata %>%
+  group_by(Nest) %>%
+  arrange(Age) %>%
+  group_map(~ .x %>%
+    calculate_rpk_fold_change(sample_id, Condition, pep_id, abundance, VIGR_blastp_evB1) %>%
+    calculate_moving_sum(value_column = fold_change, win_size = 32, step_size = 4) %>%
+    ms_plot_clean_3d_peak_annot() + 
+      ggtitle(paste("Nest", unique(.x$Nest), "- Age", unique(.x$Age))) +
+      theme(
+        plot.title = element_text(size = 10)
+      ),
+    .keep = TRUE
+  )
+
+wrap_plots(VIGR_signal_per_nest_plots, ncol = 3)
+```
+
+![](04_test_peak_significance_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
+
+``` r
+vigr_3D_peak_region_per_nest <- vigr_virscan_metadata %>%
+  group_by(Nest) %>%
+  group_map(~ .x %>%
+    calculate_rpk_fold_change(sample_id, Condition, pep_id, abundance, VIGR_blastp_evB1) %>%
+    calculate_moving_sum(value_column = fold_change, win_size = 32, step_size = 4) %>% 
+      add_column(nest = unique(.x$Nest)) %>% 
+      filter(window_start >= 1737 & window_start <= 1754) %>% 
+      distinct(window_start, .keep_all = TRUE), 
+    .keep = TRUE)
+```
+
+``` r
+count_peaks <- function(df) {
+  df %>%
+    mutate(condition = ifelse(moving_sum > 0, "Case", "Control")) %>% #TODO: change >0 to maybe >1000. Or maybe use mean per condition. above this mean is peak, below mean is no peak
+    count(condition, nest, name = "number_of_peaks") %>%
+    complete(condition = c("Case", "Control"), nest = unique(df$nest), fill = list(number_of_peaks = 0)) %>%
+    mutate(no_peaks = sum(number_of_peaks) - number_of_peaks)
+}
+```
+
+Loop function through list of nests
+
+``` r
+vigr_all_peak_counts <- map(vigr_3D_peak_region_per_nest, count_peaks) %>% 
+  bind_rows()
+```
+
+Now sum all values for cases and control and put in a contingency table
+and use fisher’s exact test
+
+``` r
+vigr_summary_counts <- vigr_all_peak_counts %>%
+  group_by(condition) %>%
+  summarise(total_peaks = sum(number_of_peaks),
+            total_no_peaks = sum(no_peaks))
+
+vigr_summary_counts %>% 
+  column_to_rownames("condition") %>% 
+  chisq.test() %>% 
+  broom::tidy()
+```
+
+    ## # A tibble: 1 × 4
+    ##   statistic      p.value parameter method                                       
+    ##       <dbl>        <dbl>     <int> <chr>                                        
+    ## 1      29.0 0.0000000738         1 Pearson's Chi-squared test with Yates' conti…
+
+Using a binary count instead, i.e., counting how many individual nests
+have this peak (in case and/or control) I am using a `moving_sum`
+threshold here of 1000 to exclude potential nests that only have a low
+enrichment in this area. This also matches the threshold used in
+`02_figure_02_alignments.Rmd`
+
+``` r
+binary_peak_count <- function(df, moving_sum_threshold = 1000) {
+  df %>%
+    mutate(condition = ifelse(moving_sum > 0, "Case", "Control")) %>%
+    group_by(condition, nest) %>%
+    summarise(has_peak = ifelse(any(moving_sum > moving_sum_threshold & condition == "Case") | any(moving_sum < moving_sum_threshold & condition == "Control"), 1, 0), .groups = "drop") %>%
+    complete(condition = c("Case", "Control"), nest = unique(df$nest), fill = list(has_peak = 0)) %>% 
+    mutate(no_peak = 1 - has_peak) 
+}
+```
+
+``` r
+vigr_all_binary_peak_counts <- map(vigr_3D_peak_region_per_nest, binary_peak_count) %>% 
+  bind_rows()
+
+vigr_binary_peak_counts_sum <- vigr_all_binary_peak_counts %>%
+  group_by(condition) %>%
+  summarise(total_peaks = sum(has_peak),
+            total_no_peaks = sum(no_peak))
+
+vigr_binary_peak_counts_sum %>% 
+  column_to_rownames("condition") %>% 
+  fisher.test() %>% 
+  broom::tidy()
+```
+
+    ## # A tibble: 1 × 6
+    ##   estimate p.value conf.low conf.high method                         alternative
+    ##      <dbl>   <dbl>    <dbl>     <dbl> <chr>                          <chr>      
+    ## 1        1       1    0.249      4.02 Fisher's Exact Test for Count… two.sided
+
+### ENDIA
+
+There are some nests that do not have both conditions, so these cannot
+be included in case/control comparison per nest. E.g. Nest 3014 does not
+have cases.
+
+Filter to keep only nests that have Cases and Controls.
+
+``` r
+endia_virscan_onset_complete_nests <- endia_virscan_onset %>% 
+  group_by(deidentified_nest_id_new) %>%
+  filter(all(c("Case", "Control") %in% condition)) %>%
+  ungroup()
+```
+
+``` r
+ENDIA_signal_per_nest_plots <- endia_virscan_onset_complete_nests %>%
+  group_by(deidentified_nest_id_new) %>%
+  mutate(age_years = round(age_at_sample_collection_days / 365), digits = 1) %>% 
+  group_map(~ .x %>%
+    calculate_rpk_fold_change(sample_id, condition, pep_id, abundance, ENDIA_blastp_evB1) %>%
+    calculate_moving_sum(value_column = fold_change, win_size = 32, step_size = 4) %>%
+    ms_plot_clean_3d_peak_annot() + 
+      ggtitle(paste("Nest", unique(.x$deidentified_nest_id_new), "- Age", unique(.x$age_years))) +
+      theme(
+        plot.title = element_text(size = 10)
+      ),
+    .keep = TRUE
+  )
+
+wrap_plots(ENDIA_signal_per_nest_plots, ncol = 6)
+```
+
+![](04_test_peak_significance_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
+
+``` r
+endia_test <- endia_virscan_onset_complete_nests %>% 
+    group_by(deidentified_nest_id_new) %>%
+    group_map(~ .x %>%
+    calculate_rpk_fold_change(sample_id, condition, pep_id, abundance, ENDIA_blastp_evB1) %>%
+    calculate_moving_sum(value_column = fold_change, win_size = 32, step_size = 4) %>% 
+      add_column(nest = unique(.x$deidentified_nest_id_new)) %>% 
+      filter(window_start >= 1735 & window_start <= 1754) %>% 
+      distinct(window_start, .keep_all = TRUE), 
+    .keep = TRUE)
+ 
+endia_test <- endia_test %>% discard(~ nrow(.x) == 0) #remove 3 dfs with 0 rows. TODO: CHECK WHY THIS IS HAPPENING
+  
+ 
+endia_all_binary_peak_counts <- map(endia_test, binary_peak_count) %>% 
+  bind_rows()
+
+endia_binary_peak_counts_sum <- endia_all_binary_peak_counts %>%
+  group_by(condition) %>%
+  summarise(total_peaks = sum(has_peak),
+            total_no_peaks = sum(no_peak))
+
+endia_binary_peak_counts_sum
+```
+
+    ## # A tibble: 2 × 3
+    ##   condition total_peaks total_no_peaks
+    ##   <chr>           <dbl>          <dbl>
+    ## 1 Case               19             17
+    ## 2 Control            22             14
+
+``` r
+endia_binary_peak_counts_sum %>% 
+  column_to_rownames("condition") %>% 
+  fisher.test() %>% 
+  broom::tidy()
+```
+
+    ## # A tibble: 1 × 6
+    ##   estimate p.value conf.low conf.high method                         alternative
+    ##      <dbl>   <dbl>    <dbl>     <dbl> <chr>                          <chr>      
+    ## 1    0.715   0.634    0.251      2.01 Fisher's Exact Test for Count… two.sided
+
+``` r
+endia_all_peak_counts <- map(endia_test, count_peaks) %>% 
+  bind_rows()
+
+endia_all_peak_counts_sum <- endia_all_peak_counts %>%
+  group_by(condition) %>%
+  summarise(total_peaks = sum(number_of_peaks),
+            total_no_peaks = sum(no_peaks))
+
+endia_all_peak_counts_sum %>% 
+  column_to_rownames("condition") %>% 
+  fisher.test() %>% 
+  broom::tidy()
+```
+
+    ## # A tibble: 1 × 6
+    ##   estimate p.value conf.low conf.high method                         alternative
+    ##      <dbl>   <dbl>    <dbl>     <dbl> <chr>                          <chr>      
+    ## 1     1.15   0.238    0.916      1.44 Fisher's Exact Test for Count… two.sided
+
+## Snippets
+
+VIGR nest 19 has both cases and control values in this region!
+
+``` r
+nest19 <- vigr_3D_peak_region_per_nest[[19]]
+
+VIGR_signal_per_nest_plots[[19]] + ylim(-400, 400)
+```
+
+![](04_test_peak_significance_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
+
+``` r
+nest19 %>% count_peaks()
+```
+
+    ## # A tibble: 2 × 4
+    ##   condition nest  number_of_peaks no_peaks
+    ##   <chr>     <chr>           <int>    <int>
+    ## 1 Case      58                  5       13
+    ## 2 Control   58                 13        5
+
+``` r
+nest19 %>% binary_peak_count(moving_sum_threshold = 300) # cases only have a peak < 300 moving_sum
+```
+
+    ## # A tibble: 2 × 4
+    ##   condition nest  has_peak no_peak
+    ##   <chr>     <chr>    <dbl>   <dbl>
+    ## 1 Case      58           1       0
+    ## 2 Control   58           1       0
+
+``` r
+nest19_count <- nest19 %>% count_peaks()
+
+nest19 %>% 
+  select(moving_sum, nest) %>% 
+  mutate(condition = ifelse(moving_sum > 0, "Case", "Control")) %>%
+  count(condition, name = "peaks") %>%
+  mutate(no_peaks = sum(peaks) - peaks) %>% 
+  column_to_rownames("condition") %>% 
+  as.matrix() %>%
+  fisher.test()
+```
+
+    ## 
+    ##  Fisher's Exact Test for Count Data
+    ## 
+    ## data:  .
+    ## p-value = 0.01839
+    ## alternative hypothesis: true odds ratio is not equal to 1
+    ## 95 percent confidence interval:
+    ##  0.02662716 0.77109087
+    ## sample estimates:
+    ## odds ratio 
+    ##  0.1573217

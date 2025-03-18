@@ -1,8 +1,8 @@
 # Calculate moving (or rolling) sum in a user defined sliding window
 
 test_window_size <- function(start, end, win_size, step_size) {
-  if (end - start >= win_size) {
-    seq(start, end - win_size, by = step_size)
+  if ((end - start + 1) >= win_size) {
+    seq(start, end - win_size + 1, by = step_size)
   } else {
     NA
   }

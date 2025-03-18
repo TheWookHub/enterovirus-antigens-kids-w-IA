@@ -130,6 +130,7 @@ tidy_glm_results <- function(glm_list) {
 }
 ```
 
+
 Test on enterovirus and mastadenovirus, works ok. 
 ```{r}
 top_genera <- c("Enterovirus", "Mastadenovirus")
@@ -143,6 +144,8 @@ endia_genera_glms <- run_glms_on_genera_endia(endia_top_genera_onset_log_rpk)
 
 tidy_glm_results(endia_genera_glms)
 ```
+
+
 
 Using all top genera
 
@@ -265,9 +268,8 @@ vigr_top_genera_glms_tidy <- tidy_glm_results(vigr_top_genera_glms)
 vigr_top_genera_glms_tidy
 ```
 
-:construction:
-
-Really wide CI for enterovirus, why?
+Really wide CI for enterovirus?
+*TODO: check for sample outliers*
 
 ```{r}
 vigr_top_genera_glms_tidy %>% 
@@ -426,8 +428,12 @@ endia_virscan_onset %>%
   arrange(no_peps)
 ```
 
-### snippets :scissors:
 
+## Snippets :scissors:
+
+<details>
+  <summary><i>Comparing top abundant vs top normalised abundant (rpk) </i></summary>
+  
 Comparing top abundant vs top normalised abundant (rpk) 
 
 ```{r}
@@ -464,9 +470,13 @@ endia_top_abundant_in_both_conditions <- endia_virscan_onset %>%
 setdiff(endia_top_rpk_in_both_conditions$taxon_genus, endia_top_abundant_in_both_conditions$taxon_genus )
 ```
 
-Snippet:
 
-Alternative way of adding p values
+</details>
+
+
+<details>
+  <summary><i> Alternative way of adding p values </i></summary>
+  
 
 ```{r, fig.width=10}
 vigr_top_genera_glms_tidy %>% 
@@ -484,13 +494,12 @@ vigr_top_genera_glms_tidy %>%
            hjust = 1, fontface = "italic", size = 3)  # Adjust size manually
 ```
 
+</details>
 
 
+<details>
+  <summary><i> Export present genera in both cohorts plus their abundance to a table </i></summary>
 
-
-Snippet:
-
-Export present genera in both cohorts plus their abundance to a table
 
 ```{r}
 endia_genera_present_plus_rpk <- endia_virscan_onset %>%
@@ -521,4 +530,169 @@ vigr_genera_present_plus_rpk  %>% pull(taxon_genus) %>% unique() %>% length()
 
 vigr_virscan_metadata %>% filter(!is.na(taxon_genus)) %>%  pull(taxon_genus) %>% unique() %>% length()
 endia_virscan_onset %>% filter(!is.na(taxon_genus)) %>% pull(taxon_genus) %>% unique() %>% length()
+```
+
+</details>
+
+<details>
+  <summary><i> Try with conditional logistic regression </i></summary>
+  
+Try with conditional logistic regression. Standard `clogit` does not support mixed effects, so I had to remove `mother_id` and only use the Nest as strata.
+
+```{r}
+endia_ev_data <- endia_top_genera_onset %>% 
+    mutate(log_genus_rpk = log(genus_rpk + 1)) %>% 
+    mutate(across(c(infant_HLA, infant_id, mother_id, deidentified_nest_id_new, infant_sex), as.factor)) %>% 
+  filter(taxon_genus == "Enterovirus")
+
+
+library(survival)
+
+endia_clogit_model <- clogit(
+  case ~ log_genus_rpk + infant_HLA + age_sample_collection_month + infant_sex + strata(deidentified_nest_id_new),
+  data = endia_ev_data,
+  weights = weightTEDDY,
+  method = "approximate" # need to do this instead of "exact" due to the added weights
+)
+
+endia_clogit_model
+```
+
+Try with different package that supports mixed effects
+*Note this doesn't work, syntax is off*
+*TODO: Fix*
+
+```{r, eval = FALSE}
+library(mclogit)
+
+mclogit(
+  formula = ~ case + log_genus_rpk + infant_HLA + age_sample_collection_month + infant_sex,
+  random = (1 | deidentified_nest_id_new),
+  data = endia_ev_data,
+  weights = weightTEDDY)
+```
+
+</details>
+
+:construction:
+
+#### Trying different families for EV genus
+
+All families are `link = "log"` except for Binomial which is `link = "logit"`
+
+- Poisson 
+- Poisson (zero inflated)
+- Binomial(link = "logit")
+- Negative binomial1
+- Negative binomial2 
+- Negative binomial2 (zero inflated)
+
+`nbinom2` is resulting in `NAN` values for all parameters except for `estimate` ?
+
+
+```{r}
+endia_form <- as.formula("case ~ log_genus_rpk + infant_HLA + age_sample_collection_month + infant_sex + (1|deidentified_nest_id_new) + (1|mother_id)")
+
+endia_ev_data <- endia_top_genera_onset %>% 
+    mutate(log_genus_rpk = log(genus_rpk + 1)) %>% 
+    mutate(across(c(infant_HLA, infant_id, mother_id, deidentified_nest_id_new, infant_sex), as.factor)) %>% 
+  filter(taxon_genus == "Enterovirus")
+
+library(glmmTMB)
+
+
+endia_model_poisson <- glmmTMB(
+  case ~ log_genus_rpk + infant_HLA + age_sample_collection_month + infant_sex + (1 | deidentified_nest_id_new) + (1 | mother_id),
+  data = endia_ev_data,
+  family = poisson(link = "log"),
+  weights = weightTEDDY
+)
+
+endia_model_poisson_zero <- glmmTMB(
+  case ~ log_genus_rpk + infant_HLA + age_sample_collection_month + infant_sex + (1 | deidentified_nest_id_new) + (1 | mother_id),
+  data = endia_ev_data,
+  z = ~1,
+  family = poisson(link = "log"),
+  weights = weightTEDDY
+)
+
+endia_model_binom <- glmmTMB(
+  case ~ log_genus_rpk + infant_HLA + age_sample_collection_month + infant_sex + (1 | deidentified_nest_id_new) + (1 | mother_id),
+  data = endia_ev_data,
+  family = binomial(link = "logit"),
+  weights = weightTEDDY
+)
+
+endia_model_nbinom1 <- glmmTMB(
+  case ~ log_genus_rpk + infant_HLA + age_sample_collection_month + infant_sex + (1 | deidentified_nest_id_new) + (1 | mother_id),
+  data = endia_ev_data,
+  family = nbinom1(link = "log"),
+  weights = weightTEDDY, 
+  control = glmmTMBControl(optimizer = optim, optArgs = list(method = "BFGS"))
+)
+
+endia_model_nbinom_zero <- glmmTMB(
+  case ~ log_genus_rpk + infant_HLA + age_sample_collection_month + infant_sex + (1 | deidentified_nest_id_new) + (1 | mother_id),
+  data = endia_ev_data,
+  family = nbinom2(link = "log"),
+  z = ~1,
+  weights = weightTEDDY, 
+  control = glmmTMBControl(optimizer = optim, optArgs = list(method = "BFGS"))
+)
+
+AIC(endia_model_poisson, endia_model_poisson_zero, endia_model_binom, endia_model_nbinom1, endia_model_nbinom_zero)
+```
+
+
+```{r}
+tidy_glm_output <- function(glm_model, family_name) {
+  broom.mixed::tidy(glm_model, effects = "fixed", conf.int = TRUE, exponentiate = TRUE) %>%
+      filter(term == "log_genus_rpk") %>%
+      mutate(model_family = family_name, .before = effect) %>% 
+      rename(exp_coefficient = estimate,
+         ci_low = conf.low,
+         ci_high = conf.high)
+}
+
+endia_model_poisson_tidy <- endia_model_poisson %>% tidy_glm_output("Poisson")
+endia_model_poisson_zero_tidy <- endia_model_poisson_zero %>% tidy_glm_output("Poisson Zero infl.")
+endia_model_binom_tidy <- endia_model_binom %>% tidy_glm_output("Binomial (logit)")
+endia_model_nbinom1_tidy <- endia_model_nbinom1 %>% tidy_glm_output("Neg. binomial")
+endia_model_nbinom_zero_tidy <- endia_model_nbinom_zero %>% tidy_glm_output("Neg. binomial Zero infl.")
+
+results <- bind_rows(endia_model_poisson_tidy, endia_model_poisson_zero_tidy, endia_model_binom_tidy, endia_model_nbinom1_tidy, endia_model_nbinom_zero_tidy)
+
+results %>% 
+  mutate(model_family_w_pvalue = paste(model_family, "(",round(p.value, digits = 2),")")) %>% 
+  arrange(desc(exp_coefficient)) %>% 
+  mutate(model_family_w_pvalue = factor(model_family_w_pvalue, levels = rev(unique(model_family_w_pvalue)))) %>% 
+  ggplot(aes(x = exp_coefficient, y = model_family_w_pvalue)) +
+  geom_point(color = "black") +
+  geom_errorbarh(aes(xmin = ci_low, xmax = ci_high), height = 0.2, color = "black") +
+  geom_vline(xintercept = 1, linetype = "dashed", color = "red") + # Reference line
+  theme_minimal() +
+  labs(x = "Exponential of coefficient", y = "Model familt and P value") +
+  theme(axis.text.y = element_text(size = 10, face = "italic")) 
+```
+
+### Try with bayesian approach 
+
+Using the Markov Chain Monte Carlo method compared to maximum likelihood from the other GLM packages
+
+*TODO:*
+
+- double check both glmmTMB and lme4 use frequentist / max. likelihood approach
+- try the [spAbundance R package](https://doserlab.com/files/spabundance-web/articles/glmm)
+- look into this `brms` result and what it means
+- compare different distributions (neg. binom and poisson)
+
+:question: *are family distributions the same for frequentist/bayesian approaches? e.g would poisson/neg binom still be the way to go, or would gaussian be ok now?*
+
+
+```{r}
+library(brms)
+
+ev_bay_negbinom_mod <- brm(formula = case ~ log_genus_rpk + infant_HLA + age_sample_collection_month + infant_sex + (1 | deidentified_nest_id_new) + (1 | mother_id),
+    data = endia_ev_data,
+    family = negbinomial())
 ```

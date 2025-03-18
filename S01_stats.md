@@ -95,9 +95,7 @@ Crazy spike for enterovirus again at high `log_rpk`
     ## # ℹ 15 more rows
     ## # ℹ 1 more variable: p_adjust_BH <dbl>
 
-:construction:
-
-Really wide CI for enterovirus, why?
+Really wide CI for enterovirus? *TODO: check for sample outliers*
 
 ![](S01_stats_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
 
@@ -256,21 +254,31 @@ Check ages in samples with lowest and highest peptide percentage
     ## 18 NSW_SYD_CHW_092_V5    Control       1.26    100  
     ## 19 SA_ADEL_REG_069_V4    Control       1.12    100
 
-### snippets :scissors:
+## Snippets :scissors:
+
+<details>
+<summary>
+<i>Comparing top abundant vs top normalised abundant (rpk) </i>
+</summary>
 
 Comparing top abundant vs top normalised abundant (rpk)
 
     ## [1] "Parechovirus"     "Alphacoronavirus"
 
-Snippet:
-
-Alternative way of adding p values
+</details>
+<details>
+<summary>
+<i> Alternative way of adding p values </i>
+</summary>
 
 ![](S01_stats_files/figure-gfm/unnamed-chunk-26-1.png)<!-- -->
 
-Snippet:
-
-Export present genera in both cohorts plus their abundance to a table
+</details>
+<details>
+<summary>
+<i> Export present genera in both cohorts plus their abundance to a
+table </i>
+</summary>
 
     ## [1] 75
 
@@ -279,3 +287,201 @@ Export present genera in both cohorts plus their abundance to a table
     ## [1] 74
 
     ## [1] 74
+
+</details>
+<details>
+<summary>
+<i> Try with conditional logistic regression </i>
+</summary>
+
+Try with conditional logistic regression. Standard `clogit` does not
+support mixed effects, so I had to remove `mother_id` and only use the
+Nest as strata.
+
+    ## Call:
+    ## clogit(case ~ log_genus_rpk + infant_HLA + age_sample_collection_month + 
+    ##     infant_sex + strata(deidentified_nest_id_new), data = endia_ev_data, 
+    ##     weights = weightTEDDY, method = "approximate")
+    ## 
+    ##                                 coef exp(coef) se(coef) robust se      z
+    ## log_genus_rpk                0.08219   1.08566  0.09863   0.10324  0.796
+    ## infant_HLADR3X_DR33         -2.69046   0.06785  0.83062   1.31859 -2.040
+    ## infant_HLADR4X_DR44         -2.74156   0.06447  0.73240   0.93470 -2.933
+    ## infant_HLADRXX              -2.93773   0.05299  0.79396   1.08046 -2.719
+    ## age_sample_collection_month  1.09395   2.98605  0.39923   0.45499  2.404
+    ## infant_sexMale                    NA        NA  0.00000   0.00000     NA
+    ##                                   p
+    ## log_genus_rpk               0.42595
+    ## infant_HLADR3X_DR33         0.04131
+    ## infant_HLADR4X_DR44         0.00336
+    ## infant_HLADRXX              0.00655
+    ## age_sample_collection_month 0.01620
+    ## infant_sexMale                   NA
+    ## 
+    ## Likelihood ratio test=35.03  on 5 df, p=1.483e-06
+    ## n= 142, number of events= 44 
+    ##    (1 observation deleted due to missingness)
+
+Try with different package that supports mixed effects *Note this
+doesn’t work, syntax is off* *TODO: Fix*
+
+</details>
+
+:construction:
+
+#### Trying different families for EV genus
+
+All families are `link = "log"` except for Binomial which is
+`link = "logit"`
+
+- Poisson
+- Poisson (zero inflated)
+- Binomial(link = “logit”)
+- Negative binomial1
+- Negative binomial2
+- Negative binomial2 (zero inflated)
+
+`nbinom2` is resulting in `NAN` values for all parameters except for
+`estimate` ?
+
+    ##                          df      AIC
+    ## endia_model_poisson       9 286.5676
+    ## endia_model_poisson_zero 10 288.5676
+    ## endia_model_binom         9 145.3387
+    ## endia_model_nbinom1      10 288.5777
+    ## endia_model_nbinom_zero  11 290.5744
+
+![](S01_stats_files/figure-gfm/unnamed-chunk-31-1.png)<!-- -->
+
+### Try with bayesian approach
+
+Using the Markov Chain Monte Carlo method compared to maximum likelihood
+from the other GLM packages
+
+*TODO:*
+
+- double check both glmmTMB and lme4 use frequentist / max. likelihood
+  approach
+- try the [spAbundance R
+  package](https://doserlab.com/files/spabundance-web/articles/glmm)
+- look into this `brms` result and what it means
+- compare different distributions (neg. binom and poisson)
+
+:question: *are family distributions the same for frequentist/bayesian
+approaches? e.g would poisson/neg binom still be the way to go, or would
+gaussian be ok now?*
+
+    ## Running /Library/Frameworks/R.framework/Resources/bin/R CMD SHLIB foo.c
+    ## using C compiler: ‘Apple clang version 16.0.0 (clang-1600.0.26.6)’
+    ## using SDK: ‘MacOSX15.2.sdk’
+    ## clang -arch arm64 -I"/Library/Frameworks/R.framework/Resources/include" -DNDEBUG   -I"/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/Rcpp/include/"  -I"/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/RcppEigen/include/"  -I"/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/RcppEigen/include/unsupported"  -I"/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/BH/include" -I"/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/StanHeaders/include/src/"  -I"/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/StanHeaders/include/"  -I"/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/RcppParallel/include/"  -I"/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/rstan/include" -DEIGEN_NO_DEBUG  -DBOOST_DISABLE_ASSERTS  -DBOOST_PENDING_INTEGER_LOG2_HPP  -DSTAN_THREADS  -DUSE_STANC3 -DSTRICT_R_HEADERS  -DBOOST_PHOENIX_NO_VARIADIC_EXPRESSION  -D_HAS_AUTO_PTR_ETC=0  -include '/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/StanHeaders/include/stan/math/prim/fun/Eigen.hpp'  -D_REENTRANT -DRCPP_PARALLEL_USE_TBB=1   -I/opt/R/arm64/include    -fPIC  -falign-functions=64 -Wall -g -O2  -c foo.c -o foo.o
+    ## In file included from <built-in>:1:
+    ## In file included from /Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/StanHeaders/include/stan/math/prim/fun/Eigen.hpp:22:
+    ## In file included from /Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/RcppEigen/include/Eigen/Dense:1:
+    ## In file included from /Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/RcppEigen/include/Eigen/Core:19:
+    ## /Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/RcppEigen/include/Eigen/src/Core/util/Macros.h:679:10: fatal error: 'cmath' file not found
+    ##   679 | #include <cmath>
+    ##       |          ^~~~~~~
+    ## 1 error generated.
+    ## make: *** [foo.o] Error 1
+
+    ## 
+    ## SAMPLING FOR MODEL 'anon_model' NOW (CHAIN 1).
+    ## Chain 1: 
+    ## Chain 1: Gradient evaluation took 6.2e-05 seconds
+    ## Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 0.62 seconds.
+    ## Chain 1: Adjust your expectations accordingly!
+    ## Chain 1: 
+    ## Chain 1: 
+    ## Chain 1: Iteration:    1 / 2000 [  0%]  (Warmup)
+    ## Chain 1: Iteration:  200 / 2000 [ 10%]  (Warmup)
+    ## Chain 1: Iteration:  400 / 2000 [ 20%]  (Warmup)
+    ## Chain 1: Iteration:  600 / 2000 [ 30%]  (Warmup)
+    ## Chain 1: Iteration:  800 / 2000 [ 40%]  (Warmup)
+    ## Chain 1: Iteration: 1000 / 2000 [ 50%]  (Warmup)
+    ## Chain 1: Iteration: 1001 / 2000 [ 50%]  (Sampling)
+    ## Chain 1: Iteration: 1200 / 2000 [ 60%]  (Sampling)
+    ## Chain 1: Iteration: 1400 / 2000 [ 70%]  (Sampling)
+    ## Chain 1: Iteration: 1600 / 2000 [ 80%]  (Sampling)
+    ## Chain 1: Iteration: 1800 / 2000 [ 90%]  (Sampling)
+    ## Chain 1: Iteration: 2000 / 2000 [100%]  (Sampling)
+    ## Chain 1: 
+    ## Chain 1:  Elapsed Time: 6.002 seconds (Warm-up)
+    ## Chain 1:                10.31 seconds (Sampling)
+    ## Chain 1:                16.312 seconds (Total)
+    ## Chain 1: 
+    ## 
+    ## SAMPLING FOR MODEL 'anon_model' NOW (CHAIN 2).
+    ## Chain 2: 
+    ## Chain 2: Gradient evaluation took 1.6e-05 seconds
+    ## Chain 2: 1000 transitions using 10 leapfrog steps per transition would take 0.16 seconds.
+    ## Chain 2: Adjust your expectations accordingly!
+    ## Chain 2: 
+    ## Chain 2: 
+    ## Chain 2: Iteration:    1 / 2000 [  0%]  (Warmup)
+    ## Chain 2: Iteration:  200 / 2000 [ 10%]  (Warmup)
+    ## Chain 2: Iteration:  400 / 2000 [ 20%]  (Warmup)
+    ## Chain 2: Iteration:  600 / 2000 [ 30%]  (Warmup)
+    ## Chain 2: Iteration:  800 / 2000 [ 40%]  (Warmup)
+    ## Chain 2: Iteration: 1000 / 2000 [ 50%]  (Warmup)
+    ## Chain 2: Iteration: 1001 / 2000 [ 50%]  (Sampling)
+    ## Chain 2: Iteration: 1200 / 2000 [ 60%]  (Sampling)
+    ## Chain 2: Iteration: 1400 / 2000 [ 70%]  (Sampling)
+    ## Chain 2: Iteration: 1600 / 2000 [ 80%]  (Sampling)
+    ## Chain 2: Iteration: 1800 / 2000 [ 90%]  (Sampling)
+    ## Chain 2: Iteration: 2000 / 2000 [100%]  (Sampling)
+    ## Chain 2: 
+    ## Chain 2:  Elapsed Time: 0.797 seconds (Warm-up)
+    ## Chain 2:                0.208 seconds (Sampling)
+    ## Chain 2:                1.005 seconds (Total)
+    ## Chain 2: 
+    ## 
+    ## SAMPLING FOR MODEL 'anon_model' NOW (CHAIN 3).
+    ## Chain 3: 
+    ## Chain 3: Gradient evaluation took 1.7e-05 seconds
+    ## Chain 3: 1000 transitions using 10 leapfrog steps per transition would take 0.17 seconds.
+    ## Chain 3: Adjust your expectations accordingly!
+    ## Chain 3: 
+    ## Chain 3: 
+    ## Chain 3: Iteration:    1 / 2000 [  0%]  (Warmup)
+    ## Chain 3: Iteration:  200 / 2000 [ 10%]  (Warmup)
+    ## Chain 3: Iteration:  400 / 2000 [ 20%]  (Warmup)
+    ## Chain 3: Iteration:  600 / 2000 [ 30%]  (Warmup)
+    ## Chain 3: Iteration:  800 / 2000 [ 40%]  (Warmup)
+    ## Chain 3: Iteration: 1000 / 2000 [ 50%]  (Warmup)
+    ## Chain 3: Iteration: 1001 / 2000 [ 50%]  (Sampling)
+    ## Chain 3: Iteration: 1200 / 2000 [ 60%]  (Sampling)
+    ## Chain 3: Iteration: 1400 / 2000 [ 70%]  (Sampling)
+    ## Chain 3: Iteration: 1600 / 2000 [ 80%]  (Sampling)
+    ## Chain 3: Iteration: 1800 / 2000 [ 90%]  (Sampling)
+    ## Chain 3: Iteration: 2000 / 2000 [100%]  (Sampling)
+    ## Chain 3: 
+    ## Chain 3:  Elapsed Time: 7.145 seconds (Warm-up)
+    ## Chain 3:                10.508 seconds (Sampling)
+    ## Chain 3:                17.653 seconds (Total)
+    ## Chain 3: 
+    ## 
+    ## SAMPLING FOR MODEL 'anon_model' NOW (CHAIN 4).
+    ## Chain 4: 
+    ## Chain 4: Gradient evaluation took 1.7e-05 seconds
+    ## Chain 4: 1000 transitions using 10 leapfrog steps per transition would take 0.17 seconds.
+    ## Chain 4: Adjust your expectations accordingly!
+    ## Chain 4: 
+    ## Chain 4: 
+    ## Chain 4: Iteration:    1 / 2000 [  0%]  (Warmup)
+    ## Chain 4: Iteration:  200 / 2000 [ 10%]  (Warmup)
+    ## Chain 4: Iteration:  400 / 2000 [ 20%]  (Warmup)
+    ## Chain 4: Iteration:  600 / 2000 [ 30%]  (Warmup)
+    ## Chain 4: Iteration:  800 / 2000 [ 40%]  (Warmup)
+    ## Chain 4: Iteration: 1000 / 2000 [ 50%]  (Warmup)
+    ## Chain 4: Iteration: 1001 / 2000 [ 50%]  (Sampling)
+    ## Chain 4: Iteration: 1200 / 2000 [ 60%]  (Sampling)
+    ## Chain 4: Iteration: 1400 / 2000 [ 70%]  (Sampling)
+    ## Chain 4: Iteration: 1600 / 2000 [ 80%]  (Sampling)
+    ## Chain 4: Iteration: 1800 / 2000 [ 90%]  (Sampling)
+    ## Chain 4: Iteration: 2000 / 2000 [100%]  (Sampling)
+    ## Chain 4: 
+    ## Chain 4:  Elapsed Time: 8.707 seconds (Warm-up)
+    ## Chain 4:                11.311 seconds (Sampling)
+    ## Chain 4:                20.018 seconds (Total)
+    ## Chain 4:

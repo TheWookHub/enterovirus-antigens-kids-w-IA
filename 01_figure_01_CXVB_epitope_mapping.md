@@ -276,4 +276,129 @@ wrap_elements(combined_fc_plots) +
 
 ![](01_figure_01_CXVB_epitope_mapping_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
 
+Using traditional fold change (division instead of subtraction)
+
+``` r
+endia_proper_fc_plot <- endia_fc %>%  
+  mutate(proper_fold_change = log2((mean_rpk_per_pepControl + 1) / (mean_rpk_per_pepCase + 1))) %>% 
+  mutate(Condition = if_else(proper_fold_change > 0, "Case", "Control")) %>% 
+   ggplot(aes(x = (start + end) / 2, y = proper_fold_change, fill = Condition)) +
+    geom_bar(stat = "identity") +
+    labs(x = "", fill = "", y = "") +
+    theme_minimal() +
+    theme(panel.grid.minor = element_blank(),
+          panel.grid.major = element_blank()) +
+  ggtitle("ENDIA")
+
+vigr_proper_fc_plot <- vigr_fc %>%
+  mutate(proper_fold_change = log2((mean_rpk_per_pepControl + 1) / (mean_rpk_per_pepCase + 1))) %>% 
+  mutate(Condition = if_else(proper_fold_change > 0, "Case", "Control")) %>% 
+   ggplot(aes(x = (start + end) / 2, y = proper_fold_change, fill = Condition)) +
+    geom_bar(stat = "identity") +
+    labs(x = "", fill = "", y = "") +
+    theme_minimal() +
+    theme(panel.grid.minor = element_blank(),
+          panel.grid.major = element_blank()) +
+    ggtitle("VIGR")
+
+combined_proper_fc_plots <- wrap_plots(EV_B1_plot,
+                                vigr_proper_fc_plot,
+                                endia_proper_fc_plot + labs(x = "Position in sequence (amino acids)") + theme(legend.position = "bottom"),
+                                                     ncol = 1, heights = c(0.3, 3, 3)) &
+  theme(plot.margin = margin(5.5, 5.5, 5.5, 0),
+        plot.title = element_text(size = 10)) 
+
+wrap_elements(combined_proper_fc_plots) +
+  labs(tag = expression(log2(bar(X)[rpk_cases] / bar(X)[rpk_controls]))) +
+  theme(
+    plot.tag = element_text(size = rel(1), angle = 90),
+    plot.tag.position = "left"
+  )
+```
+
+![](01_figure_01_CXVB_epitope_mapping_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
+
+Using the `moving_sum` calculated on `proper_fold_change`
+
+``` r
+vigr_proper_fc <- vigr_fc %>%
+  mutate(proper_fold_change = log2((mean_rpk_per_pepControl + 1) / (mean_rpk_per_pepCase + 1))) %>% 
+  mutate(Condition = if_else(proper_fold_change > 0, "Case", "Control")) 
+
+vigr_proper_fc_ms <- calculate_moving_sum(vigr_proper_fc, value_column = proper_fold_change, win_size = 32, step_size = 4)
+
+vigr_proper_fc_ms_plot <- vigr_proper_fc_ms %>% 
+  ms_plot_clean() +
+    ggtitle("VIGR")
+
+endia_proper_fc <- endia_fc %>%  
+  mutate(proper_fold_change = log2((mean_rpk_per_pepControl + 1) / (mean_rpk_per_pepCase + 1))) %>% 
+  mutate(Condition = if_else(proper_fold_change > 0, "Case", "Control"))
+
+endia_proper_fc_ms <- calculate_moving_sum(endia_proper_fc, value_column = proper_fold_change, win_size = 32, step_size = 4)
+
+endia_proper_fc_ms_plot <- endia_proper_fc_ms %>% 
+  ms_plot_clean() +
+    ggtitle("ENDIA")
+
+
+combined_proper_fc_ms_plots <- wrap_plots(EV_B1_plot,
+                                vigr_proper_fc_ms_plot,
+                                endia_proper_fc_ms_plot + labs(x = "Position in sequence (amino acids)") + theme(legend.position = "bottom"),
+                                                     ncol = 1, heights = c(0.3, 3, 3)) &
+  theme(plot.margin = margin(5.5, 5.5, 5.5, 0),
+        plot.title = element_text(size = 10)) 
+
+wrap_elements(combined_proper_fc_ms_plots) +
+  labs(tag = expression(sum(log2(bar(X)[rpk_cases] / bar(X)[rpk_controls])))) +
+  theme(
+    plot.tag = element_text(size = rel(1), angle = 90),
+    plot.tag.position = "left"
+  )
+```
+
+![](01_figure_01_CXVB_epitope_mapping_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
+
+As above but without using `log2`
+
+``` r
+vigr_proper_fc_nl <- vigr_fc %>%
+ # mutate(proper_fold_change = (mean_rpk_per_pepControl + 1) / (mean_rpk_per_pepCase + 1)) %>% 
+   mutate(proper_fold_change = mean_rpk_per_pepControl / mean_rpk_per_pepCase) %>% 
+  mutate(Condition = if_else(proper_fold_change > 0, "Case", "Control")) 
+
+vigr_proper_fc_nl_ms <- calculate_moving_sum(vigr_proper_fc, value_column = proper_fold_change, win_size = 32, step_size = 4)
+
+vigr_proper_fc_ms_nl_plot <- vigr_proper_fc_nl_ms %>% 
+  ms_plot_clean() +
+    ggtitle("VIGR")
+
+endia_proper_fc_nl <- endia_fc %>%  
+  #mutate(proper_fold_change = (mean_rpk_per_pepControl + 1) / (mean_rpk_per_pepCase + 1)) %>% 
+  mutate(proper_fold_change = mean_rpk_per_pepControl / mean_rpk_per_pepCase) %>% 
+  mutate(Condition = if_else(proper_fold_change > 0, "Case", "Control"))
+
+endia_proper_fc_nl_ms <- calculate_moving_sum(endia_proper_fc_nl, value_column = proper_fold_change, win_size = 32, step_size = 4)
+
+endia_proper_fc_nl_ms_plot <- endia_proper_fc_nl_ms %>% 
+  ms_plot_clean() +
+    ggtitle("ENDIA")
+
+combined_proper_fc_nl_ms_plots <- wrap_plots(EV_B1_plot,
+                                vigr_proper_fc_ms_nl_plot,
+                                endia_proper_fc_nl_ms_plot + labs(x = "Position in sequence (amino acids)") + theme(legend.position = "bottom"),
+                                                     ncol = 1, heights = c(0.3, 3, 3)) &
+  theme(plot.margin = margin(5.5, 5.5, 5.5, 0),
+        plot.title = element_text(size = 10)) 
+
+wrap_elements(combined_proper_fc_nl_ms_plots) +
+  labs(tag = expression(sum(bar(X)[rpk_cases] / bar(X)[rpk_controls]))) +
+  theme(
+    plot.tag = element_text(size = rel(1), angle = 90),
+    plot.tag.position = "left"
+  )
+```
+
+![](01_figure_01_CXVB_epitope_mapping_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
+
 </details>

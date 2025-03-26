@@ -14,7 +14,7 @@ source("scripts/plot_ev_polyprotein.R")
 ```
 
 Read in Cohort datasets generated in
-`01_figure_01_CXVB_epitope_mapping.Rmd`
+`01_figure_01_CXVB_antigen_mapping.Rmd`
 
 ``` r
 endia_virscan_onset <- read_rds("cache/endia_virscan_metadata.rds") %>% 

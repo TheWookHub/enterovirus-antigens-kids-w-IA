@@ -29,7 +29,7 @@ export_ev_prot_seq(coxsackievirusB1_P08291, ev_protein = "3D", ev_protein_suffix
 }
 ```
 
-Read in data prepared in `01_figure_01_CXVB_epitope_mapping.Rmd`
+Read in data prepared in `01_figure_01_CXVB_antigen_mapping.Rmd`
 
 ``` r
 endia_virscan_onset <- read_rds("cache/endia_virscan_metadata.rds") %>% filter(onset_visit == 1)
@@ -59,7 +59,7 @@ get_peak_coordinates(ms_w_pprot_df = endia_ms_w_polyprot,
                      condition = "cases")
 ```
 
-    ## # A tibble: 70 × 5
+    ## # A tibble: 78 × 5
     ##    window_start window_end moving_sum start   end
     ##           <dbl>      <dbl>      <int> <dbl> <dbl>
     ##  1          572        603       1875     1    32
@@ -72,7 +72,7 @@ get_peak_coordinates(ms_w_pprot_df = endia_ms_w_polyprot,
     ##  8          581        612       1071    10    41
     ##  9          583        614       1071    12    43
     ## 10          584        615        500    13    44
-    ## # ℹ 60 more rows
+    ## # ℹ 68 more rows
 
 - `start`: 1 = `window_start`: 572
 - `end`: 14 = `window_start`: 585

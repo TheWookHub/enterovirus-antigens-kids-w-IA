@@ -280,7 +280,7 @@ Using traditional fold change (division instead of subtraction)
 
 ``` r
 endia_proper_fc_plot <- endia_fc %>%  
-  mutate(proper_fold_change = log2((mean_rpk_per_pepControl + 1) / (mean_rpk_per_pepCase + 1))) %>% 
+  mutate(proper_fold_change = log2((mean_rpk_per_pepCase + 1) / (mean_rpk_per_pepControl + 1))) %>% 
   mutate(Condition = if_else(proper_fold_change > 0, "Case", "Control")) %>% 
    ggplot(aes(x = (start + end) / 2, y = proper_fold_change, fill = Condition)) +
     geom_bar(stat = "identity") +
@@ -291,7 +291,7 @@ endia_proper_fc_plot <- endia_fc %>%
   ggtitle("ENDIA")
 
 vigr_proper_fc_plot <- vigr_fc %>%
-  mutate(proper_fold_change = log2((mean_rpk_per_pepControl + 1) / (mean_rpk_per_pepCase + 1))) %>% 
+  mutate(proper_fold_change = log2((mean_rpk_per_pepCase + 1) / (mean_rpk_per_pepControl + 1))) %>% 
   mutate(Condition = if_else(proper_fold_change > 0, "Case", "Control")) %>% 
    ggplot(aes(x = (start + end) / 2, y = proper_fold_change, fill = Condition)) +
     geom_bar(stat = "identity") +
@@ -322,7 +322,7 @@ Using the `moving_sum` calculated on `proper_fold_change`
 
 ``` r
 vigr_proper_fc <- vigr_fc %>%
-  mutate(proper_fold_change = log2((mean_rpk_per_pepControl + 1) / (mean_rpk_per_pepCase + 1))) %>% 
+  mutate(proper_fold_change = log2((mean_rpk_per_pepCase + 1) / (mean_rpk_per_pepControl + 1))) %>% 
   mutate(Condition = if_else(proper_fold_change > 0, "Case", "Control")) 
 
 vigr_proper_fc_ms <- calculate_moving_sum(vigr_proper_fc, value_column = proper_fold_change, win_size = 32, step_size = 4)
@@ -332,7 +332,7 @@ vigr_proper_fc_ms_plot <- vigr_proper_fc_ms %>%
     ggtitle("VIGR")
 
 endia_proper_fc <- endia_fc %>%  
-  mutate(proper_fold_change = log2((mean_rpk_per_pepControl + 1) / (mean_rpk_per_pepCase + 1))) %>% 
+  mutate(proper_fold_change = log2((mean_rpk_per_pepCase + 1) / (mean_rpk_per_pepControl + 1))) %>% 
   mutate(Condition = if_else(proper_fold_change > 0, "Case", "Control"))
 
 endia_proper_fc_ms <- calculate_moving_sum(endia_proper_fc, value_column = proper_fold_change, win_size = 32, step_size = 4)
@@ -363,8 +363,7 @@ As above but without using `log2`
 
 ``` r
 vigr_proper_fc_nl <- vigr_fc %>%
- # mutate(proper_fold_change = (mean_rpk_per_pepControl + 1) / (mean_rpk_per_pepCase + 1)) %>% 
-   mutate(proper_fold_change = mean_rpk_per_pepControl / mean_rpk_per_pepCase) %>% 
+   mutate(proper_fold_change = mean_rpk_per_pepCase / mean_rpk_per_pepControl) %>% 
   mutate(Condition = if_else(proper_fold_change > 0, "Case", "Control")) 
 
 vigr_proper_fc_nl_ms <- calculate_moving_sum(vigr_proper_fc, value_column = proper_fold_change, win_size = 32, step_size = 4)
@@ -374,8 +373,7 @@ vigr_proper_fc_ms_nl_plot <- vigr_proper_fc_nl_ms %>%
     ggtitle("VIGR")
 
 endia_proper_fc_nl <- endia_fc %>%  
-  #mutate(proper_fold_change = (mean_rpk_per_pepControl + 1) / (mean_rpk_per_pepCase + 1)) %>% 
-  mutate(proper_fold_change = mean_rpk_per_pepControl / mean_rpk_per_pepCase) %>% 
+  mutate(proper_fold_change = mean_rpk_per_pepCase / mean_rpk_per_pepControl) %>% 
   mutate(Condition = if_else(proper_fold_change > 0, "Case", "Control"))
 
 endia_proper_fc_nl_ms <- calculate_moving_sum(endia_proper_fc_nl, value_column = proper_fold_change, win_size = 32, step_size = 4)

@@ -131,6 +131,497 @@ Also, speaking of which, the CI for the Intercept in both models is huge
     ## vigr_model_binomial  8 73.00261
     ## vigr_model_poisson   8 86.47268
 
+### GLM on enterovirus abundance in both cohorts for paper
+
+Use mixed model with poisson distribution for paper on both cohorts
+using the `glmmmTMB` R package
+
+<div id="edqqfgcgxs" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#edqqfgcgxs table {
+  font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+&#10;#edqqfgcgxs thead, #edqqfgcgxs tbody, #edqqfgcgxs tfoot, #edqqfgcgxs tr, #edqqfgcgxs td, #edqqfgcgxs th {
+  border-style: none;
+}
+&#10;#edqqfgcgxs p {
+  margin: 0;
+  padding: 0;
+}
+&#10;#edqqfgcgxs .gt_table {
+  display: table;
+  border-collapse: collapse;
+  line-height: normal;
+  margin-left: auto;
+  margin-right: auto;
+  color: #333333;
+  font-size: 16px;
+  font-weight: normal;
+  font-style: normal;
+  background-color: #FFFFFF;
+  width: auto;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #A8A8A8;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #A8A8A8;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+}
+&#10;#edqqfgcgxs .gt_caption {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+&#10;#edqqfgcgxs .gt_title {
+  color: #333333;
+  font-size: 125%;
+  font-weight: initial;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-bottom-color: #FFFFFF;
+  border-bottom-width: 0;
+}
+&#10;#edqqfgcgxs .gt_subtitle {
+  color: #333333;
+  font-size: 85%;
+  font-weight: initial;
+  padding-top: 3px;
+  padding-bottom: 5px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-color: #FFFFFF;
+  border-top-width: 0;
+}
+&#10;#edqqfgcgxs .gt_heading {
+  background-color: #FFFFFF;
+  text-align: center;
+  border-bottom-color: #FFFFFF;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+&#10;#edqqfgcgxs .gt_bottom_border {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+&#10;#edqqfgcgxs .gt_col_headings {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+&#10;#edqqfgcgxs .gt_col_heading {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 6px;
+  padding-left: 5px;
+  padding-right: 5px;
+  overflow-x: hidden;
+}
+&#10;#edqqfgcgxs .gt_column_spanner_outer {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+&#10;#edqqfgcgxs .gt_column_spanner_outer:first-child {
+  padding-left: 0;
+}
+&#10;#edqqfgcgxs .gt_column_spanner_outer:last-child {
+  padding-right: 0;
+}
+&#10;#edqqfgcgxs .gt_column_spanner {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  overflow-x: hidden;
+  display: inline-block;
+  width: 100%;
+}
+&#10;#edqqfgcgxs .gt_spanner_row {
+  border-bottom-style: hidden;
+}
+&#10;#edqqfgcgxs .gt_group_heading {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+  text-align: left;
+}
+&#10;#edqqfgcgxs .gt_empty_group_heading {
+  padding: 0.5px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: middle;
+}
+&#10;#edqqfgcgxs .gt_from_md > :first-child {
+  margin-top: 0;
+}
+&#10;#edqqfgcgxs .gt_from_md > :last-child {
+  margin-bottom: 0;
+}
+&#10;#edqqfgcgxs .gt_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  margin: 10px;
+  border-top-style: solid;
+  border-top-width: 1px;
+  border-top-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+  overflow-x: hidden;
+}
+&#10;#edqqfgcgxs .gt_stub {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-right-style: solid;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+&#10;#edqqfgcgxs .gt_stub_row_group {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-right-style: solid;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  padding-left: 5px;
+  padding-right: 5px;
+  vertical-align: top;
+}
+&#10;#edqqfgcgxs .gt_row_group_first td {
+  border-top-width: 2px;
+}
+&#10;#edqqfgcgxs .gt_row_group_first th {
+  border-top-width: 2px;
+}
+&#10;#edqqfgcgxs .gt_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+&#10;#edqqfgcgxs .gt_first_summary_row {
+  border-top-style: solid;
+  border-top-color: #D3D3D3;
+}
+&#10;#edqqfgcgxs .gt_first_summary_row.thick {
+  border-top-width: 2px;
+}
+&#10;#edqqfgcgxs .gt_last_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+&#10;#edqqfgcgxs .gt_grand_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+&#10;#edqqfgcgxs .gt_first_grand_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-style: double;
+  border-top-width: 6px;
+  border-top-color: #D3D3D3;
+}
+&#10;#edqqfgcgxs .gt_last_grand_summary_row_top {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-bottom-style: double;
+  border-bottom-width: 6px;
+  border-bottom-color: #D3D3D3;
+}
+&#10;#edqqfgcgxs .gt_striped {
+  background-color: rgba(128, 128, 128, 0.05);
+}
+&#10;#edqqfgcgxs .gt_table_body {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+&#10;#edqqfgcgxs .gt_footnotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+&#10;#edqqfgcgxs .gt_footnote {
+  margin: 0px;
+  font-size: 90%;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+&#10;#edqqfgcgxs .gt_sourcenotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+&#10;#edqqfgcgxs .gt_sourcenote {
+  font-size: 90%;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+&#10;#edqqfgcgxs .gt_left {
+  text-align: left;
+}
+&#10;#edqqfgcgxs .gt_center {
+  text-align: center;
+}
+&#10;#edqqfgcgxs .gt_right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+&#10;#edqqfgcgxs .gt_font_normal {
+  font-weight: normal;
+}
+&#10;#edqqfgcgxs .gt_font_bold {
+  font-weight: bold;
+}
+&#10;#edqqfgcgxs .gt_font_italic {
+  font-style: italic;
+}
+&#10;#edqqfgcgxs .gt_super {
+  font-size: 65%;
+}
+&#10;#edqqfgcgxs .gt_footnote_marks {
+  font-size: 75%;
+  vertical-align: 0.4em;
+  position: initial;
+}
+&#10;#edqqfgcgxs .gt_asterisk {
+  font-size: 100%;
+  vertical-align: 0;
+}
+&#10;#edqqfgcgxs .gt_indent_1 {
+  text-indent: 5px;
+}
+&#10;#edqqfgcgxs .gt_indent_2 {
+  text-indent: 10px;
+}
+&#10;#edqqfgcgxs .gt_indent_3 {
+  text-indent: 15px;
+}
+&#10;#edqqfgcgxs .gt_indent_4 {
+  text-indent: 20px;
+}
+&#10;#edqqfgcgxs .gt_indent_5 {
+  text-indent: 25px;
+}
+&#10;#edqqfgcgxs .katex-display {
+  display: inline-flex !important;
+  margin-bottom: 0.75em !important;
+}
+&#10;#edqqfgcgxs div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
+  height: 0px !important;
+}
+</style>
+<table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
+  <thead>
+    <tr class="gt_heading">
+      <td colspan="5" class="gt_heading gt_title gt_font_normal gt_bottom_border" style>Summary of GLM model tests</td>
+    </tr>
+    &#10;    <tr class="gt_col_headings">
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="a::stub"></th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="RR">RR</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="CI-lower">CI Lower</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="CI-upper">CI Upper</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="p.value">Pr(&gt;|z|)</th>
+    </tr>
+  </thead>
+  <tbody class="gt_table_body">
+    <tr class="gt_group_heading_row">
+      <th colspan="5" class="gt_group_heading" style="background-color: #D3D3D3;" scope="colgroup" id="VIGR">VIGR</th>
+    </tr>
+    <tr class="gt_row_group_first"><th id="stub_1_1" scope="row" class="gt_row gt_left gt_stub">Intercept</th>
+<td headers="VIGR stub_1_1 RR" class="gt_row gt_left">0.001</td>
+<td headers="VIGR stub_1_1 CI lower" class="gt_row gt_left">0.000</td>
+<td headers="VIGR stub_1_1 CI upper" class="gt_row gt_left">16,143.513</td>
+<td headers="VIGR stub_1_1 p.value" class="gt_row gt_left">0.396</td></tr>
+    <tr><th id="stub_1_2" scope="row" class="gt_row gt_left gt_stub">log(EV)</th>
+<td headers="VIGR stub_1_2 RR" class="gt_row gt_left">1.825</td>
+<td headers="VIGR stub_1_2 CI lower" class="gt_row gt_left">0.396</td>
+<td headers="VIGR stub_1_2 CI upper" class="gt_row gt_left">8.418</td>
+<td headers="VIGR stub_1_2 p.value" class="gt_row gt_left">0.441</td></tr>
+    <tr><th id="stub_1_3" scope="row" class="gt_row gt_left gt_stub">HLA_StatusRisk</th>
+<td headers="VIGR stub_1_3 RR" class="gt_row gt_left">1.075</td>
+<td headers="VIGR stub_1_3 CI lower" class="gt_row gt_left">0.393</td>
+<td headers="VIGR stub_1_3 CI upper" class="gt_row gt_left">2.939</td>
+<td headers="VIGR stub_1_3 p.value" class="gt_row gt_left">0.888</td></tr>
+    <tr><th id="stub_1_4" scope="row" class="gt_row gt_left gt_stub">HLA_StatusUnknown</th>
+<td headers="VIGR stub_1_4 RR" class="gt_row gt_left">0.920</td>
+<td headers="VIGR stub_1_4 CI lower" class="gt_row gt_left">0.115</td>
+<td headers="VIGR stub_1_4 CI upper" class="gt_row gt_left">7.384</td>
+<td headers="VIGR stub_1_4 p.value" class="gt_row gt_left">0.937</td></tr>
+    <tr><th id="stub_1_5" scope="row" class="gt_row gt_left gt_stub">Age</th>
+<td headers="VIGR stub_1_5 RR" class="gt_row gt_left">1.013</td>
+<td headers="VIGR stub_1_5 CI lower" class="gt_row gt_left">0.891</td>
+<td headers="VIGR stub_1_5 CI upper" class="gt_row gt_left">1.153</td>
+<td headers="VIGR stub_1_5 p.value" class="gt_row gt_left">0.843</td></tr>
+    <tr><th id="stub_1_6" scope="row" class="gt_row gt_left gt_stub">SexM</th>
+<td headers="VIGR stub_1_6 RR" class="gt_row gt_left">1.006</td>
+<td headers="VIGR stub_1_6 CI lower" class="gt_row gt_left">0.394</td>
+<td headers="VIGR stub_1_6 CI upper" class="gt_row gt_left">2.568</td>
+<td headers="VIGR stub_1_6 p.value" class="gt_row gt_left">0.991</td></tr>
+    <tr class="gt_group_heading_row">
+      <th colspan="5" class="gt_group_heading" style="background-color: #D3D3D3;" scope="colgroup" id="ENDIA">ENDIA</th>
+    </tr>
+    <tr class="gt_row_group_first"><th id="stub_1_7" scope="row" class="gt_row gt_left gt_stub">Intercept</th>
+<td headers="ENDIA stub_1_7 RR" class="gt_row gt_left">0.059</td>
+<td headers="ENDIA stub_1_7 CI lower" class="gt_row gt_left">0.008</td>
+<td headers="ENDIA stub_1_7 CI upper" class="gt_row gt_left">0.412</td>
+<td headers="ENDIA stub_1_7 p.value" class="gt_row gt_left">0.004</td></tr>
+    <tr><th id="stub_1_8" scope="row" class="gt_row gt_left gt_stub">log(EV)</th>
+<td headers="ENDIA stub_1_8 RR" class="gt_row gt_left">1.122</td>
+<td headers="ENDIA stub_1_8 CI lower" class="gt_row gt_left">0.944</td>
+<td headers="ENDIA stub_1_8 CI upper" class="gt_row gt_left">1.332</td>
+<td headers="ENDIA stub_1_8 p.value" class="gt_row gt_left">0.191</td></tr>
+    <tr><th id="stub_1_9" scope="row" class="gt_row gt_left gt_stub">infant_HLADR3X_DR33</th>
+<td headers="ENDIA stub_1_9 RR" class="gt_row gt_left">0.129</td>
+<td headers="ENDIA stub_1_9 CI lower" class="gt_row gt_left">0.034</td>
+<td headers="ENDIA stub_1_9 CI upper" class="gt_row gt_left">0.487</td>
+<td headers="ENDIA stub_1_9 p.value" class="gt_row gt_left">0.003</td></tr>
+    <tr><th id="stub_1_10" scope="row" class="gt_row gt_left gt_stub">infant_HLADR4X_DR44</th>
+<td headers="ENDIA stub_1_10 RR" class="gt_row gt_left">0.098</td>
+<td headers="ENDIA stub_1_10 CI lower" class="gt_row gt_left">0.026</td>
+<td headers="ENDIA stub_1_10 CI upper" class="gt_row gt_left">0.365</td>
+<td headers="ENDIA stub_1_10 p.value" class="gt_row gt_left">0.001</td></tr>
+    <tr><th id="stub_1_11" scope="row" class="gt_row gt_left gt_stub">infant_HLADRXX</th>
+<td headers="ENDIA stub_1_11 RR" class="gt_row gt_left">0.084</td>
+<td headers="ENDIA stub_1_11 CI lower" class="gt_row gt_left">0.020</td>
+<td headers="ENDIA stub_1_11 CI upper" class="gt_row gt_left">0.356</td>
+<td headers="ENDIA stub_1_11 p.value" class="gt_row gt_left">0.001</td></tr>
+    <tr><th id="stub_1_12" scope="row" class="gt_row gt_left gt_stub">age_sample_collection_month</th>
+<td headers="ENDIA stub_1_12 RR" class="gt_row gt_left">1.010</td>
+<td headers="ENDIA stub_1_12 CI lower" class="gt_row gt_left">0.982</td>
+<td headers="ENDIA stub_1_12 CI upper" class="gt_row gt_left">1.039</td>
+<td headers="ENDIA stub_1_12 p.value" class="gt_row gt_left">0.481</td></tr>
+    <tr><th id="stub_1_13" scope="row" class="gt_row gt_left gt_stub">infant_sexMale</th>
+<td headers="ENDIA stub_1_13 RR" class="gt_row gt_left">1.376</td>
+<td headers="ENDIA stub_1_13 CI lower" class="gt_row gt_left">0.565</td>
+<td headers="ENDIA stub_1_13 CI upper" class="gt_row gt_left">3.350</td>
+<td headers="ENDIA stub_1_13 p.value" class="gt_row gt_left">0.482</td></tr>
+  </tbody>
+  &#10;  
+</table>
+</div>
+
 :construction: :construction: :construction:
 
 trying with neg. binom, no better in VIGR (*TODO*: try with ENDIA) Maybe
@@ -271,7 +762,7 @@ Comparing top abundant vs top normalised abundant (rpk)
 <i> Alternative way of adding p values </i>
 </summary>
 
-![](S01_stats_files/figure-gfm/unnamed-chunk-26-1.png)<!-- -->
+![](S01_stats_files/figure-gfm/unnamed-chunk-29-1.png)<!-- -->
 
 </details>
 <details>
@@ -351,7 +842,7 @@ All families are `link = "log"` except for Binomial which is
     ## endia_model_nbinom1      10 288.5777
     ## endia_model_nbinom_zero  11 290.5744
 
-![](S01_stats_files/figure-gfm/unnamed-chunk-31-1.png)<!-- -->
+![](S01_stats_files/figure-gfm/unnamed-chunk-34-1.png)<!-- -->
 
 ### Try with bayesian approach
 
@@ -371,25 +862,11 @@ from the other GLM packages
 approaches? e.g would poisson/neg binom still be the way to go, or would
 gaussian be ok now?*
 
-    ## Running /Library/Frameworks/R.framework/Resources/bin/R CMD SHLIB foo.c
-    ## using C compiler: ‘Apple clang version 16.0.0 (clang-1600.0.26.6)’
-    ## using SDK: ‘MacOSX15.2.sdk’
-    ## clang -arch arm64 -I"/Library/Frameworks/R.framework/Resources/include" -DNDEBUG   -I"/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/Rcpp/include/"  -I"/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/RcppEigen/include/"  -I"/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/RcppEigen/include/unsupported"  -I"/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/BH/include" -I"/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/StanHeaders/include/src/"  -I"/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/StanHeaders/include/"  -I"/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/RcppParallel/include/"  -I"/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/rstan/include" -DEIGEN_NO_DEBUG  -DBOOST_DISABLE_ASSERTS  -DBOOST_PENDING_INTEGER_LOG2_HPP  -DSTAN_THREADS  -DUSE_STANC3 -DSTRICT_R_HEADERS  -DBOOST_PHOENIX_NO_VARIADIC_EXPRESSION  -D_HAS_AUTO_PTR_ETC=0  -include '/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/StanHeaders/include/stan/math/prim/fun/Eigen.hpp'  -D_REENTRANT -DRCPP_PARALLEL_USE_TBB=1   -I/opt/R/arm64/include    -fPIC  -falign-functions=64 -Wall -g -O2  -c foo.c -o foo.o
-    ## In file included from <built-in>:1:
-    ## In file included from /Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/StanHeaders/include/stan/math/prim/fun/Eigen.hpp:22:
-    ## In file included from /Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/RcppEigen/include/Eigen/Dense:1:
-    ## In file included from /Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/RcppEigen/include/Eigen/Core:19:
-    ## /Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/RcppEigen/include/Eigen/src/Core/util/Macros.h:679:10: fatal error: 'cmath' file not found
-    ##   679 | #include <cmath>
-    ##       |          ^~~~~~~
-    ## 1 error generated.
-    ## make: *** [foo.o] Error 1
-
     ## 
     ## SAMPLING FOR MODEL 'anon_model' NOW (CHAIN 1).
     ## Chain 1: 
-    ## Chain 1: Gradient evaluation took 6.2e-05 seconds
-    ## Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 0.62 seconds.
+    ## Chain 1: Gradient evaluation took 6.8e-05 seconds
+    ## Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 0.68 seconds.
     ## Chain 1: Adjust your expectations accordingly!
     ## Chain 1: 
     ## Chain 1: 
@@ -406,15 +883,15 @@ gaussian be ok now?*
     ## Chain 1: Iteration: 1800 / 2000 [ 90%]  (Sampling)
     ## Chain 1: Iteration: 2000 / 2000 [100%]  (Sampling)
     ## Chain 1: 
-    ## Chain 1:  Elapsed Time: 6.002 seconds (Warm-up)
-    ## Chain 1:                10.31 seconds (Sampling)
-    ## Chain 1:                16.312 seconds (Total)
+    ## Chain 1:  Elapsed Time: 5.209 seconds (Warm-up)
+    ## Chain 1:                10.692 seconds (Sampling)
+    ## Chain 1:                15.901 seconds (Total)
     ## Chain 1: 
     ## 
     ## SAMPLING FOR MODEL 'anon_model' NOW (CHAIN 2).
     ## Chain 2: 
-    ## Chain 2: Gradient evaluation took 1.6e-05 seconds
-    ## Chain 2: 1000 transitions using 10 leapfrog steps per transition would take 0.16 seconds.
+    ## Chain 2: Gradient evaluation took 2e-05 seconds
+    ## Chain 2: 1000 transitions using 10 leapfrog steps per transition would take 0.2 seconds.
     ## Chain 2: Adjust your expectations accordingly!
     ## Chain 2: 
     ## Chain 2: 
@@ -431,15 +908,15 @@ gaussian be ok now?*
     ## Chain 2: Iteration: 1800 / 2000 [ 90%]  (Sampling)
     ## Chain 2: Iteration: 2000 / 2000 [100%]  (Sampling)
     ## Chain 2: 
-    ## Chain 2:  Elapsed Time: 0.797 seconds (Warm-up)
-    ## Chain 2:                0.208 seconds (Sampling)
-    ## Chain 2:                1.005 seconds (Total)
+    ## Chain 2:  Elapsed Time: 4.459 seconds (Warm-up)
+    ## Chain 2:                10.191 seconds (Sampling)
+    ## Chain 2:                14.65 seconds (Total)
     ## Chain 2: 
     ## 
     ## SAMPLING FOR MODEL 'anon_model' NOW (CHAIN 3).
     ## Chain 3: 
-    ## Chain 3: Gradient evaluation took 1.7e-05 seconds
-    ## Chain 3: 1000 transitions using 10 leapfrog steps per transition would take 0.17 seconds.
+    ## Chain 3: Gradient evaluation took 1.4e-05 seconds
+    ## Chain 3: 1000 transitions using 10 leapfrog steps per transition would take 0.14 seconds.
     ## Chain 3: Adjust your expectations accordingly!
     ## Chain 3: 
     ## Chain 3: 
@@ -456,15 +933,15 @@ gaussian be ok now?*
     ## Chain 3: Iteration: 1800 / 2000 [ 90%]  (Sampling)
     ## Chain 3: Iteration: 2000 / 2000 [100%]  (Sampling)
     ## Chain 3: 
-    ## Chain 3:  Elapsed Time: 7.145 seconds (Warm-up)
-    ## Chain 3:                10.508 seconds (Sampling)
-    ## Chain 3:                17.653 seconds (Total)
+    ## Chain 3:  Elapsed Time: 7.866 seconds (Warm-up)
+    ## Chain 3:                10.843 seconds (Sampling)
+    ## Chain 3:                18.709 seconds (Total)
     ## Chain 3: 
     ## 
     ## SAMPLING FOR MODEL 'anon_model' NOW (CHAIN 4).
     ## Chain 4: 
-    ## Chain 4: Gradient evaluation took 1.7e-05 seconds
-    ## Chain 4: 1000 transitions using 10 leapfrog steps per transition would take 0.17 seconds.
+    ## Chain 4: Gradient evaluation took 1.3e-05 seconds
+    ## Chain 4: 1000 transitions using 10 leapfrog steps per transition would take 0.13 seconds.
     ## Chain 4: Adjust your expectations accordingly!
     ## Chain 4: 
     ## Chain 4: 
@@ -481,7 +958,7 @@ gaussian be ok now?*
     ## Chain 4: Iteration: 1800 / 2000 [ 90%]  (Sampling)
     ## Chain 4: Iteration: 2000 / 2000 [100%]  (Sampling)
     ## Chain 4: 
-    ## Chain 4:  Elapsed Time: 8.707 seconds (Warm-up)
-    ## Chain 4:                11.311 seconds (Sampling)
-    ## Chain 4:                20.018 seconds (Total)
+    ## Chain 4:  Elapsed Time: 7.681 seconds (Warm-up)
+    ## Chain 4:                10.977 seconds (Sampling)
+    ## Chain 4:                18.658 seconds (Total)
     ## Chain 4:

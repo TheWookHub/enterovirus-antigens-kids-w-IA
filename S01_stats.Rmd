@@ -304,6 +304,103 @@ vigr_model_poisson %>% tidy(conf.int = TRUE, exponentiate = TRUE)
 AIC(vigr_model_binomial, vigr_model_poisson)
 ```
 
+### GLM on enterovirus abundance in both cohorts for paper
+
+Use mixed model with poisson distribution for paper on both cohorts using the `glmmmTMB` R package
+         
+```{r}
+library(glmmTMB)
+
+vigr_ev_data <- vigr_top_genera_virscan_log_rpk %>% filter(taxon_genus == "Enterovirus")
+
+
+vigr_ev_model_poisson <- glmmTMB(case ~ log_genus_rpk + HLA_Status + Age + Sex + (1|Nest) + (1|My_name),
+                                family = poisson(link = "log"),
+                                data = vigr_ev_data)
+
+
+vigr_ev_model_poisson_tidy <- vigr_ev_model_poisson %>% 
+  tidy(conf.int = TRUE, exponentiate = TRUE) %>% 
+        rename(RR = estimate,
+               `CI lower` = conf.low,
+               `CI upper` = conf.high) %>% 
+    select(term, RR, `CI lower`, `CI upper`, p.value) %>% 
+    add_column(cohort = "VIGR")
+
+
+endia_ev_data <- endia_all_top_genera_onset_log_rpk %>% filter(taxon_genus == "Enterovirus")
+
+
+endia_ev_model_poisson <- glmmTMB(formula = case ~ log_genus_rpk + infant_HLA + age_sample_collection_month + infant_sex + (1|deidentified_nest_id_new) + (1|mother_id),
+       family = poisson(link = "log"),
+        weights = weightTEDDY,
+       data = endia_ev_data)
+
+
+endia_ev_model_poisson_tidy <- endia_ev_model_poisson %>% 
+  tidy(conf.int = TRUE, exponentiate = TRUE) %>% 
+        rename(RR = estimate,
+               `CI lower` = conf.low,
+               `CI upper` = conf.high) %>% 
+    select(term, RR, `CI lower`, `CI upper`, p.value) %>% 
+    add_column(cohort = "ENDIA")
+```
+
+
+```{r}
+tidy_models_data <- rbind(endia_ev_model_poisson_tidy, vigr_ev_model_poisson_tidy)
+
+
+library(gt)
+
+tidy_models_data_table <- tidy_models_data %>%
+  select(-cohort) %>% 
+  filter(!str_detect(term, "sd")) %>% 
+  mutate(term = case_when(
+    term == "log_genus_rpk" ~ "log(EV)",
+    term == "(Intercept)" ~ "Intercept",
+    TRUE ~ term
+  )) %>% 
+  gt(rowname_col = "term") %>%
+  tab_header(
+    title = "Summary of GLM model tests"
+  ) %>%
+  cols_label(
+    term = "Predictor",
+    RR = "RR",
+    `CI lower` = "CI Lower",
+    `CI upper` = "CI Upper",
+    p.value = "Pr(>|z|)"
+  ) %>%
+  fmt_number(
+    columns = c(RR, `CI lower`, `CI upper`, p.value),
+    decimals = 3
+  ) %>%
+  cols_align(
+    align = "left",
+    columns = everything()
+  ) %>% 
+  tab_row_group(
+    label = "ENDIA",
+    rows = 1:7
+  ) %>% 
+  tab_row_group(
+    label = "VIGR",
+    rows = 8:13
+  ) %>% 
+  tab_style(
+    style = cell_fill(color = "lightgrey"),
+    locations = cells_row_groups(groups = c("ENDIA", "VIGR"))
+  )
+
+tidy_models_data_table
+```
+
+```{r}
+gtsave(tidy_models_data_table, "figures/glm_results_onset_ev.png")
+```
+
+
 :construction:  :construction:  :construction: 
 
 trying with neg. binom, no better in VIGR (*TODO*: try with ENDIA)
@@ -326,6 +423,7 @@ vigr_model_neg_binom_zi <- glmmTMB(case ~ log_genus_rpk + HLA_Status + Age + Sex
                                    data = ev_virscan_genus_rpk,
                                    ziformula = ~1)
 ```
+
 
 -------------------------------------------------------------------------------
 

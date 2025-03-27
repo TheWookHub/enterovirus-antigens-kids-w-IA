@@ -200,7 +200,7 @@ figure_1 <- wrap_elements(combined_ms_plots) +
   )
 ```
 
-![](01_figure_01_CXVB_epitope_mapping_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
+![](01_figure_01_CXVB_antigen_mapping_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
 
 **Figure 1:** Comparison of enterovirus antigen landscapes in children
 with islet autoimmunity versus controls in two cohorts, VIGR (top) and
@@ -274,7 +274,7 @@ wrap_elements(combined_fc_plots) +
   )
 ```
 
-![](01_figure_01_CXVB_epitope_mapping_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
+![](01_figure_01_CXVB_antigen_mapping_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
 
 Using traditional fold change (division instead of subtraction)
 
@@ -316,7 +316,7 @@ wrap_elements(combined_proper_fc_plots) +
   )
 ```
 
-![](01_figure_01_CXVB_epitope_mapping_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
+![](01_figure_01_CXVB_antigen_mapping_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
 
 Using the `moving_sum` calculated on `proper_fold_change`
 
@@ -357,7 +357,7 @@ wrap_elements(combined_proper_fc_ms_plots) +
   )
 ```
 
-![](01_figure_01_CXVB_epitope_mapping_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
+![](01_figure_01_CXVB_antigen_mapping_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
 
 As above but without using `log2`
 
@@ -399,6 +399,6 @@ wrap_elements(combined_proper_fc_nl_ms_plots) +
   )
 ```
 
-![](01_figure_01_CXVB_epitope_mapping_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
+![](01_figure_01_CXVB_antigen_mapping_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
 
 </details>

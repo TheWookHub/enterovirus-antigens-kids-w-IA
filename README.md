@@ -17,3 +17,8 @@ The files required to run these Rmd files can be obtained in
 
 - [Produce alignments used in Figure 02](02_figure_02_alignments.md) :
   Rmd file [02_figure_02_alignments.Rmd](02_figure_02_alignments.Rmd)
+
+- [Stratify by nest and age to show antigen landscape in individual
+  nests and in different sexes](03_stratify_by_nest_and_sex.md) : Rmd
+  file
+  [03_stratify_by_nest_and_sex.Rmd](03_stratify_by_nest_and_sex.Rmd)

@@ -3,13 +3,16 @@
 
 This repository contains the code that was used in the analyses for
 “Distinct enterovirus antigen landscape in children with islet
-autoimmunity”, published in the \*\*\*\*\* journal as [link]().
+autoimmunity”, published in the \*\*\*\*\* journal as
+[update_with_link](). This paper examines antigens identified by VirScan
+in two paediatric cohorts, Viruses In the Genetically at Risk (VIGR) and
+Environmental Determinants of Islet Autoimmunity (ENDIA).
 
 Each Rmd is associated with a specific figure in the paper. To reproduce
 the figures, please run the code in order of the Rmds.
 
 The files required to run these Rmd files can be obtained in
-[link_to_data]()
+[update_with_link_to_data]()
 
 - [Generate datafiles and produce Figure
   01](01_figure_01_CXVB_antigen_mapping.md) : Rmd file

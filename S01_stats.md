@@ -2,10 +2,23 @@
 *TODO:*
 
 - move functions to scripts
+
 - combine fit_glm function for VIGR and ENDIA into a single function
+
 - Try negative binomial model (with potential zero inflation) for ENDIA
+
 - Tidy up :broom:
+
 - attend other TODO notes spread in this Rmd
+
+- Examine how changing Random Effects affect the models
+
+- Possibly re-run everything with ENDIA controls removed that were once
+  cases:
+
+- VIC_MEL_RMH_057_V4 in nest 1985
+
+- NSW_SYD_STG_007_V5 in nest 3941
 
 ### ENDIA
 
@@ -136,20 +149,20 @@ Also, speaking of which, the CI for the Intercept in both models is huge
 Use mixed model with poisson distribution for paper on both cohorts
 using the `glmmmTMB` R package
 
-<div id="edqqfgcgxs" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
-<style>#edqqfgcgxs table {
+<div id="sxtnmxqxka" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#sxtnmxqxka table {
   font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-&#10;#edqqfgcgxs thead, #edqqfgcgxs tbody, #edqqfgcgxs tfoot, #edqqfgcgxs tr, #edqqfgcgxs td, #edqqfgcgxs th {
+&#10;#sxtnmxqxka thead, #sxtnmxqxka tbody, #sxtnmxqxka tfoot, #sxtnmxqxka tr, #sxtnmxqxka td, #sxtnmxqxka th {
   border-style: none;
 }
-&#10;#edqqfgcgxs p {
+&#10;#sxtnmxqxka p {
   margin: 0;
   padding: 0;
 }
-&#10;#edqqfgcgxs .gt_table {
+&#10;#sxtnmxqxka .gt_table {
   display: table;
   border-collapse: collapse;
   line-height: normal;
@@ -174,11 +187,11 @@ using the `glmmmTMB` R package
   border-left-width: 2px;
   border-left-color: #D3D3D3;
 }
-&#10;#edqqfgcgxs .gt_caption {
+&#10;#sxtnmxqxka .gt_caption {
   padding-top: 4px;
   padding-bottom: 4px;
 }
-&#10;#edqqfgcgxs .gt_title {
+&#10;#sxtnmxqxka .gt_title {
   color: #333333;
   font-size: 125%;
   font-weight: initial;
@@ -189,7 +202,7 @@ using the `glmmmTMB` R package
   border-bottom-color: #FFFFFF;
   border-bottom-width: 0;
 }
-&#10;#edqqfgcgxs .gt_subtitle {
+&#10;#sxtnmxqxka .gt_subtitle {
   color: #333333;
   font-size: 85%;
   font-weight: initial;
@@ -200,7 +213,7 @@ using the `glmmmTMB` R package
   border-top-color: #FFFFFF;
   border-top-width: 0;
 }
-&#10;#edqqfgcgxs .gt_heading {
+&#10;#sxtnmxqxka .gt_heading {
   background-color: #FFFFFF;
   text-align: center;
   border-bottom-color: #FFFFFF;
@@ -211,12 +224,12 @@ using the `glmmmTMB` R package
   border-right-width: 1px;
   border-right-color: #D3D3D3;
 }
-&#10;#edqqfgcgxs .gt_bottom_border {
+&#10;#sxtnmxqxka .gt_bottom_border {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
 }
-&#10;#edqqfgcgxs .gt_col_headings {
+&#10;#sxtnmxqxka .gt_col_headings {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -230,7 +243,7 @@ using the `glmmmTMB` R package
   border-right-width: 1px;
   border-right-color: #D3D3D3;
 }
-&#10;#edqqfgcgxs .gt_col_heading {
+&#10;#sxtnmxqxka .gt_col_heading {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -249,7 +262,7 @@ using the `glmmmTMB` R package
   padding-right: 5px;
   overflow-x: hidden;
 }
-&#10;#edqqfgcgxs .gt_column_spanner_outer {
+&#10;#sxtnmxqxka .gt_column_spanner_outer {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -260,13 +273,13 @@ using the `glmmmTMB` R package
   padding-left: 4px;
   padding-right: 4px;
 }
-&#10;#edqqfgcgxs .gt_column_spanner_outer:first-child {
+&#10;#sxtnmxqxka .gt_column_spanner_outer:first-child {
   padding-left: 0;
 }
-&#10;#edqqfgcgxs .gt_column_spanner_outer:last-child {
+&#10;#sxtnmxqxka .gt_column_spanner_outer:last-child {
   padding-right: 0;
 }
-&#10;#edqqfgcgxs .gt_column_spanner {
+&#10;#sxtnmxqxka .gt_column_spanner {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
@@ -277,10 +290,10 @@ using the `glmmmTMB` R package
   display: inline-block;
   width: 100%;
 }
-&#10;#edqqfgcgxs .gt_spanner_row {
+&#10;#sxtnmxqxka .gt_spanner_row {
   border-bottom-style: hidden;
 }
-&#10;#edqqfgcgxs .gt_group_heading {
+&#10;#sxtnmxqxka .gt_group_heading {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -305,7 +318,7 @@ using the `glmmmTMB` R package
   vertical-align: middle;
   text-align: left;
 }
-&#10;#edqqfgcgxs .gt_empty_group_heading {
+&#10;#sxtnmxqxka .gt_empty_group_heading {
   padding: 0.5px;
   color: #333333;
   background-color: #FFFFFF;
@@ -319,13 +332,13 @@ using the `glmmmTMB` R package
   border-bottom-color: #D3D3D3;
   vertical-align: middle;
 }
-&#10;#edqqfgcgxs .gt_from_md > :first-child {
+&#10;#sxtnmxqxka .gt_from_md > :first-child {
   margin-top: 0;
 }
-&#10;#edqqfgcgxs .gt_from_md > :last-child {
+&#10;#sxtnmxqxka .gt_from_md > :last-child {
   margin-bottom: 0;
 }
-&#10;#edqqfgcgxs .gt_row {
+&#10;#sxtnmxqxka .gt_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -343,7 +356,7 @@ using the `glmmmTMB` R package
   vertical-align: middle;
   overflow-x: hidden;
 }
-&#10;#edqqfgcgxs .gt_stub {
+&#10;#sxtnmxqxka .gt_stub {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -355,7 +368,7 @@ using the `glmmmTMB` R package
   padding-left: 5px;
   padding-right: 5px;
 }
-&#10;#edqqfgcgxs .gt_stub_row_group {
+&#10;#sxtnmxqxka .gt_stub_row_group {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -368,13 +381,13 @@ using the `glmmmTMB` R package
   padding-right: 5px;
   vertical-align: top;
 }
-&#10;#edqqfgcgxs .gt_row_group_first td {
+&#10;#sxtnmxqxka .gt_row_group_first td {
   border-top-width: 2px;
 }
-&#10;#edqqfgcgxs .gt_row_group_first th {
+&#10;#sxtnmxqxka .gt_row_group_first th {
   border-top-width: 2px;
 }
-&#10;#edqqfgcgxs .gt_summary_row {
+&#10;#sxtnmxqxka .gt_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -383,14 +396,14 @@ using the `glmmmTMB` R package
   padding-left: 5px;
   padding-right: 5px;
 }
-&#10;#edqqfgcgxs .gt_first_summary_row {
+&#10;#sxtnmxqxka .gt_first_summary_row {
   border-top-style: solid;
   border-top-color: #D3D3D3;
 }
-&#10;#edqqfgcgxs .gt_first_summary_row.thick {
+&#10;#sxtnmxqxka .gt_first_summary_row.thick {
   border-top-width: 2px;
 }
-&#10;#edqqfgcgxs .gt_last_summary_row {
+&#10;#sxtnmxqxka .gt_last_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -399,7 +412,7 @@ using the `glmmmTMB` R package
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
 }
-&#10;#edqqfgcgxs .gt_grand_summary_row {
+&#10;#sxtnmxqxka .gt_grand_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -408,7 +421,7 @@ using the `glmmmTMB` R package
   padding-left: 5px;
   padding-right: 5px;
 }
-&#10;#edqqfgcgxs .gt_first_grand_summary_row {
+&#10;#sxtnmxqxka .gt_first_grand_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -417,7 +430,7 @@ using the `glmmmTMB` R package
   border-top-width: 6px;
   border-top-color: #D3D3D3;
 }
-&#10;#edqqfgcgxs .gt_last_grand_summary_row_top {
+&#10;#sxtnmxqxka .gt_last_grand_summary_row_top {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -426,10 +439,10 @@ using the `glmmmTMB` R package
   border-bottom-width: 6px;
   border-bottom-color: #D3D3D3;
 }
-&#10;#edqqfgcgxs .gt_striped {
+&#10;#sxtnmxqxka .gt_striped {
   background-color: rgba(128, 128, 128, 0.05);
 }
-&#10;#edqqfgcgxs .gt_table_body {
+&#10;#sxtnmxqxka .gt_table_body {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -437,7 +450,7 @@ using the `glmmmTMB` R package
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
 }
-&#10;#edqqfgcgxs .gt_footnotes {
+&#10;#sxtnmxqxka .gt_footnotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -450,7 +463,7 @@ using the `glmmmTMB` R package
   border-right-width: 2px;
   border-right-color: #D3D3D3;
 }
-&#10;#edqqfgcgxs .gt_footnote {
+&#10;#sxtnmxqxka .gt_footnote {
   margin: 0px;
   font-size: 90%;
   padding-top: 4px;
@@ -458,7 +471,7 @@ using the `glmmmTMB` R package
   padding-left: 5px;
   padding-right: 5px;
 }
-&#10;#edqqfgcgxs .gt_sourcenotes {
+&#10;#sxtnmxqxka .gt_sourcenotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -471,64 +484,64 @@ using the `glmmmTMB` R package
   border-right-width: 2px;
   border-right-color: #D3D3D3;
 }
-&#10;#edqqfgcgxs .gt_sourcenote {
+&#10;#sxtnmxqxka .gt_sourcenote {
   font-size: 90%;
   padding-top: 4px;
   padding-bottom: 4px;
   padding-left: 5px;
   padding-right: 5px;
 }
-&#10;#edqqfgcgxs .gt_left {
+&#10;#sxtnmxqxka .gt_left {
   text-align: left;
 }
-&#10;#edqqfgcgxs .gt_center {
+&#10;#sxtnmxqxka .gt_center {
   text-align: center;
 }
-&#10;#edqqfgcgxs .gt_right {
+&#10;#sxtnmxqxka .gt_right {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
-&#10;#edqqfgcgxs .gt_font_normal {
+&#10;#sxtnmxqxka .gt_font_normal {
   font-weight: normal;
 }
-&#10;#edqqfgcgxs .gt_font_bold {
+&#10;#sxtnmxqxka .gt_font_bold {
   font-weight: bold;
 }
-&#10;#edqqfgcgxs .gt_font_italic {
+&#10;#sxtnmxqxka .gt_font_italic {
   font-style: italic;
 }
-&#10;#edqqfgcgxs .gt_super {
+&#10;#sxtnmxqxka .gt_super {
   font-size: 65%;
 }
-&#10;#edqqfgcgxs .gt_footnote_marks {
+&#10;#sxtnmxqxka .gt_footnote_marks {
   font-size: 75%;
   vertical-align: 0.4em;
   position: initial;
 }
-&#10;#edqqfgcgxs .gt_asterisk {
+&#10;#sxtnmxqxka .gt_asterisk {
   font-size: 100%;
   vertical-align: 0;
 }
-&#10;#edqqfgcgxs .gt_indent_1 {
+&#10;#sxtnmxqxka .gt_indent_1 {
   text-indent: 5px;
 }
-&#10;#edqqfgcgxs .gt_indent_2 {
+&#10;#sxtnmxqxka .gt_indent_2 {
   text-indent: 10px;
 }
-&#10;#edqqfgcgxs .gt_indent_3 {
+&#10;#sxtnmxqxka .gt_indent_3 {
   text-indent: 15px;
 }
-&#10;#edqqfgcgxs .gt_indent_4 {
+&#10;#sxtnmxqxka .gt_indent_4 {
   text-indent: 20px;
 }
-&#10;#edqqfgcgxs .gt_indent_5 {
+&#10;#sxtnmxqxka .gt_indent_5 {
   text-indent: 25px;
 }
-&#10;#edqqfgcgxs .katex-display {
+&#10;#sxtnmxqxka .katex-display {
   display: inline-flex !important;
   margin-bottom: 0.75em !important;
 }
-&#10;#edqqfgcgxs div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
+&#10;#sxtnmxqxka div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
   height: 0px !important;
 }
 </style>
@@ -644,6 +657,74 @@ add dispersion variable with `dispformula` ?
     ## vigr_model_neg_binom  9 88.47271
     ## vigr_model_binomial   8 73.00261
     ## vigr_model_poisson    8 86.47268
+
+#### Examining how changing Random Effects affect the model on enterovirus genus by using:
+
+- both `deidentified_nest_id_new` and `mother_id`
+- only `deidentified_nest_id_new`
+- only `mother_id` *this option resulted in the lowest AIC and df*
+
+<!-- -->
+
+    ##  Family: poisson  ( log )
+    ## Formula:          
+    ## case ~ log_genus_rpk + infant_HLA + age_sample_collection_month +  
+    ##     infant_sex + (1 | mother_id)
+    ## Data: virscan_EV_onset
+    ## Weights: weightTEDDY
+    ## 
+    ##      AIC      BIC   logLik deviance df.resid 
+    ##    284.6    308.2   -134.3    268.6      134 
+    ## 
+    ## Random effects:
+    ## 
+    ## Conditional model:
+    ##  Groups    Name        Variance Std.Dev.
+    ##  mother_id (Intercept) 2.868    1.694   
+    ## Number of obs: 142, groups:  mother_id, 124
+    ## 
+    ## Conditional model:
+    ##                             Estimate Std. Error z value Pr(>|z|)    
+    ## (Intercept)                 -2.83457    0.99330  -2.854  0.00432 ** 
+    ## log_genus_rpk                0.11469    0.08778   1.307  0.19133    
+    ## infant_HLADR3X_DR33         -2.05131    0.67961  -3.018  0.00254 ** 
+    ## infant_HLADR4X_DR44         -2.32266    0.67029  -3.465  0.00053 ***
+    ## infant_HLADRXX              -2.47798    0.73754  -3.360  0.00078 ***
+    ## age_sample_collection_month  0.01021    0.01449   0.705  0.48105    
+    ## infant_sexMale               0.31919    0.45404   0.703  0.48206    
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+    ## # A tibble: 8 × 8
+    ##   effect   component group     term        estimate std.error statistic  p.value
+    ##   <chr>    <chr>     <chr>     <chr>          <dbl>     <dbl>     <dbl>    <dbl>
+    ## 1 fixed    cond      <NA>      (Intercept)  -2.83      0.993     -2.85   4.32e-3
+    ## 2 fixed    cond      <NA>      log_genus_…   0.115     0.0878     1.31   1.91e-1
+    ## 3 fixed    cond      <NA>      infant_HLA…  -2.05      0.680     -3.02   2.54e-3
+    ## 4 fixed    cond      <NA>      infant_HLA…  -2.32      0.670     -3.47   5.30e-4
+    ## 5 fixed    cond      <NA>      infant_HLA…  -2.48      0.738     -3.36   7.80e-4
+    ## 6 fixed    cond      <NA>      age_sample…   0.0102    0.0145     0.705  4.81e-1
+    ## 7 fixed    cond      <NA>      infant_sex…   0.319     0.454      0.703  4.82e-1
+    ## 8 ran_pars cond      mother_id sd__(Inter…   1.69     NA         NA     NA
+
+    ## Data: virscan_EV_onset
+    ## Models:
+    ## test_EV_virscan_glmm_no_mum_id: case ~ log_genus_rpk + infant_HLA + age_sample_collection_month + , zi=~0, disp=~1
+    ## test_EV_virscan_glmm_no_mum_id:     infant_sex + (1 | deidentified_nest_id_new), zi=~0, disp=~1
+    ## test_EV_virscan_glmm_no_nest: case ~ log_genus_rpk + infant_HLA + age_sample_collection_month + , zi=~0, disp=~1
+    ## test_EV_virscan_glmm_no_nest:     infant_sex + (1 | mother_id), zi=~0, disp=~1
+    ## test_EV_virscan_glmm: case ~ log_genus_rpk + infant_HLA + age_sample_collection_month + , zi=~0, disp=~1
+    ## test_EV_virscan_glmm:     infant_sex + (1 | deidentified_nest_id_new) + (1 | mother_id), zi=~0, disp=~1
+    ##                                Df    AIC    BIC  logLik deviance  Chisq Chi Df
+    ## test_EV_virscan_glmm_no_mum_id  8 307.37 331.02 -145.69   291.37              
+    ## test_EV_virscan_glmm_no_nest    8 284.57 308.21 -134.28   268.57 22.802      0
+    ## test_EV_virscan_glmm            9 286.57 313.17 -134.28   268.57  0.000      1
+    ##                                Pr(>Chisq)    
+    ## test_EV_virscan_glmm_no_mum_id               
+    ## test_EV_virscan_glmm_no_nest       <2e-16 ***
+    ## test_EV_virscan_glmm                    1    
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 ------------------------------------------------------------------------
 
@@ -762,7 +843,7 @@ Comparing top abundant vs top normalised abundant (rpk)
 <i> Alternative way of adding p values </i>
 </summary>
 
-![](S01_stats_files/figure-gfm/unnamed-chunk-29-1.png)<!-- -->
+![](S01_stats_files/figure-gfm/unnamed-chunk-30-1.png)<!-- -->
 
 </details>
 <details>
@@ -842,7 +923,7 @@ All families are `link = "log"` except for Binomial which is
     ## endia_model_nbinom1      10 288.5777
     ## endia_model_nbinom_zero  11 290.5744
 
-![](S01_stats_files/figure-gfm/unnamed-chunk-34-1.png)<!-- -->
+![](S01_stats_files/figure-gfm/unnamed-chunk-35-1.png)<!-- -->
 
 ### Try with bayesian approach
 
@@ -865,8 +946,8 @@ gaussian be ok now?*
     ## 
     ## SAMPLING FOR MODEL 'anon_model' NOW (CHAIN 1).
     ## Chain 1: 
-    ## Chain 1: Gradient evaluation took 6.8e-05 seconds
-    ## Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 0.68 seconds.
+    ## Chain 1: Gradient evaluation took 6.7e-05 seconds
+    ## Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 0.67 seconds.
     ## Chain 1: Adjust your expectations accordingly!
     ## Chain 1: 
     ## Chain 1: 
@@ -883,15 +964,15 @@ gaussian be ok now?*
     ## Chain 1: Iteration: 1800 / 2000 [ 90%]  (Sampling)
     ## Chain 1: Iteration: 2000 / 2000 [100%]  (Sampling)
     ## Chain 1: 
-    ## Chain 1:  Elapsed Time: 5.209 seconds (Warm-up)
-    ## Chain 1:                10.692 seconds (Sampling)
-    ## Chain 1:                15.901 seconds (Total)
+    ## Chain 1:  Elapsed Time: 0.749 seconds (Warm-up)
+    ## Chain 1:                0.213 seconds (Sampling)
+    ## Chain 1:                0.962 seconds (Total)
     ## Chain 1: 
     ## 
     ## SAMPLING FOR MODEL 'anon_model' NOW (CHAIN 2).
     ## Chain 2: 
-    ## Chain 2: Gradient evaluation took 2e-05 seconds
-    ## Chain 2: 1000 transitions using 10 leapfrog steps per transition would take 0.2 seconds.
+    ## Chain 2: Gradient evaluation took 3.2e-05 seconds
+    ## Chain 2: 1000 transitions using 10 leapfrog steps per transition would take 0.32 seconds.
     ## Chain 2: Adjust your expectations accordingly!
     ## Chain 2: 
     ## Chain 2: 
@@ -908,15 +989,15 @@ gaussian be ok now?*
     ## Chain 2: Iteration: 1800 / 2000 [ 90%]  (Sampling)
     ## Chain 2: Iteration: 2000 / 2000 [100%]  (Sampling)
     ## Chain 2: 
-    ## Chain 2:  Elapsed Time: 4.459 seconds (Warm-up)
-    ## Chain 2:                10.191 seconds (Sampling)
-    ## Chain 2:                14.65 seconds (Total)
+    ## Chain 2:  Elapsed Time: 8.704 seconds (Warm-up)
+    ## Chain 2:                10.698 seconds (Sampling)
+    ## Chain 2:                19.402 seconds (Total)
     ## Chain 2: 
     ## 
     ## SAMPLING FOR MODEL 'anon_model' NOW (CHAIN 3).
     ## Chain 3: 
-    ## Chain 3: Gradient evaluation took 1.4e-05 seconds
-    ## Chain 3: 1000 transitions using 10 leapfrog steps per transition would take 0.14 seconds.
+    ## Chain 3: Gradient evaluation took 1.6e-05 seconds
+    ## Chain 3: 1000 transitions using 10 leapfrog steps per transition would take 0.16 seconds.
     ## Chain 3: Adjust your expectations accordingly!
     ## Chain 3: 
     ## Chain 3: 
@@ -933,15 +1014,15 @@ gaussian be ok now?*
     ## Chain 3: Iteration: 1800 / 2000 [ 90%]  (Sampling)
     ## Chain 3: Iteration: 2000 / 2000 [100%]  (Sampling)
     ## Chain 3: 
-    ## Chain 3:  Elapsed Time: 7.866 seconds (Warm-up)
-    ## Chain 3:                10.843 seconds (Sampling)
-    ## Chain 3:                18.709 seconds (Total)
+    ## Chain 3:  Elapsed Time: 8.065 seconds (Warm-up)
+    ## Chain 3:                11.643 seconds (Sampling)
+    ## Chain 3:                19.708 seconds (Total)
     ## Chain 3: 
     ## 
     ## SAMPLING FOR MODEL 'anon_model' NOW (CHAIN 4).
     ## Chain 4: 
-    ## Chain 4: Gradient evaluation took 1.3e-05 seconds
-    ## Chain 4: 1000 transitions using 10 leapfrog steps per transition would take 0.13 seconds.
+    ## Chain 4: Gradient evaluation took 2.6e-05 seconds
+    ## Chain 4: 1000 transitions using 10 leapfrog steps per transition would take 0.26 seconds.
     ## Chain 4: Adjust your expectations accordingly!
     ## Chain 4: 
     ## Chain 4: 
@@ -958,7 +1039,7 @@ gaussian be ok now?*
     ## Chain 4: Iteration: 1800 / 2000 [ 90%]  (Sampling)
     ## Chain 4: Iteration: 2000 / 2000 [100%]  (Sampling)
     ## Chain 4: 
-    ## Chain 4:  Elapsed Time: 7.681 seconds (Warm-up)
-    ## Chain 4:                10.977 seconds (Sampling)
-    ## Chain 4:                18.658 seconds (Total)
+    ## Chain 4:  Elapsed Time: 6.538 seconds (Warm-up)
+    ## Chain 4:                11.225 seconds (Sampling)
+    ## Chain 4:                17.763 seconds (Total)
     ## Chain 4:

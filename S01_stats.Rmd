@@ -22,6 +22,13 @@ library(broom.mixed)
 - Tidy up :broom:
 - attend other TODO notes spread in this Rmd
 
+- Examine how changing Random Effects affect the models
+
+- Possibly re-run everything with ENDIA controls removed that were once cases:
+
+- VIC_MEL_RMH_057_V4 in nest 1985 
+- NSW_SYD_STG_007_V5 in nest 3941
+
 ```{r}
 endia_virscan_onset <- read_rds("cache/endia_virscan_metadata.rds") %>% 
   filter(onset_visit == 1) %>% 
@@ -424,6 +431,52 @@ vigr_model_neg_binom_zi <- glmmTMB(case ~ log_genus_rpk + HLA_Status + Age + Sex
                                    ziformula = ~1)
 ```
 
+#### Examining how changing Random Effects affect the model on enterovirus genus by using:
+
+- both `deidentified_nest_id_new` and `mother_id`
+- only `deidentified_nest_id_new`
+- only `mother_id` *this option resulted in the lowest AIC and df*
+
+```{r}
+endia_onset_log_genus_rpk <- endia_virscan_onset %>% 
+  group_by(sample_id, taxon_genus) %>% 
+  mutate(genus_rpk = sum(rpk)) %>% 
+  ungroup() %>% 
+  distinct(taxon_genus, sample_id, .keep_all = TRUE) %>% 
+  select(sample_id, case, condition, taxon_genus, genus_rpk, infant_id, mother_id, 
+         deidentified_nest_id_new, age_at_sample_collection_days, infant_sex,
+         infant_HLA, weightTEDDY) %>% 
+  mutate(age_sample_collection_month = age_at_sample_collection_days / 365 * 12) %>% 
+  mutate(log_genus_rpk = log(genus_rpk + 1)) %>% 
+  mutate(across(c(infant_HLA, infant_id, mother_id, deidentified_nest_id_new, infant_sex), as.factor))
+
+virscan_EV_onset <- endia_onset_log_genus_rpk %>% filter(taxon_genus == "Enterovirus") 
+
+library(glmmTMB)
+
+test_EV_virscan_glmm <- glmmTMB(
+      formula = case ~ log_genus_rpk + infant_HLA + age_sample_collection_month + infant_sex + (1|deidentified_nest_id_new) + (1|mother_id),
+      data = virscan_EV_onset,
+      family = poisson(link = "log"),
+      weights = weightTEDDY)
+
+test_EV_virscan_glmm_no_mum_id <- glmmTMB(
+      formula = case ~ log_genus_rpk + infant_HLA + age_sample_collection_month + infant_sex + (1|deidentified_nest_id_new),
+      data = virscan_EV_onset,
+      family = poisson(link = "log"),
+      weights = weightTEDDY)
+
+test_EV_virscan_glmm_no_nest <- glmmTMB(
+      formula = case ~ log_genus_rpk + infant_HLA + age_sample_collection_month + infant_sex + (1|mother_id),
+      data = virscan_EV_onset,
+      family = poisson(link = "log"),
+      weights = weightTEDDY)
+
+summary(test_EV_virscan_glmm_no_nest)
+test_EV_virscan_glmm_no_nest %>% broom::tidy()
+
+anova(test_EV_virscan_glmm, test_EV_virscan_glmm_no_mum_id, test_EV_virscan_glmm_no_nest)
+```
 
 -------------------------------------------------------------------------------
 

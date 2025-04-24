@@ -353,6 +353,10 @@ endia_ev_model_poisson_tidy <- endia_ev_model_poisson %>%
     add_column(cohort = "ENDIA")
 ```
 
+```{r}
+library(gtsummary)
+endia_ev_model_poisson %>% tbl_regression(exponentiate = TRUE)
+```
 
 ```{r}
 tidy_models_data <- rbind(endia_ev_model_poisson_tidy, vigr_ev_model_poisson_tidy)

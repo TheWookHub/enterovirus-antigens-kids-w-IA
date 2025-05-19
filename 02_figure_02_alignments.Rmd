@@ -56,7 +56,6 @@ endia_ms_w_polyprot <- endia_ms %>%
                   match_fun = list(`>=`, `<=`)) %>% 
   drop_na()
 
-
 get_peak_coordinates(ms_w_pprot_df = endia_ms_w_polyprot,
                      ev_prot_name = "VP1",
                      ev_prot_start_col = start.y,

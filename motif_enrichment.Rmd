@@ -1,24 +1,20 @@
 ---
-title: "Untitled"
 output: html_document
-date: "2025-05-19"
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, options(readr.show_col_types = FALSE))
 ```
+
+*CONTINUE HERE*
+- redo stats with endia_matched_w_all_visits ( metadata 1:1 ratio for nests, possible remake this filw with all samples except onset only
+- combine metadata with virscan to create endia_virscan_onse_1to1
 
 ```{r}
 library(tidyverse)
 source("scripts/read_blast.R")
 library(glmmTMB)
 ```
-
-*CONTINUE HERE MONDAY*
-
-TODO:
-
-REDO STATS WITH 1:1 RATIO
 
 ```{r}
 endia_samples <- read_csv("raw_data/metadata/identify_plasma_samples.csv") %>% 
@@ -29,9 +25,11 @@ endia_metadata <- readxl::read_xlsx("raw_data/metadata/finalweights_teddy_plasma
   relocate(participant_id) %>% 
   mutate(recorded_visit = str_replace(recorded_visit, "(?<=[BVT])0", ""), # replace 0 preceded by B, V or T
          condition = ifelse(case == 1, "Case", "Control")) %>% 
-  unite(sample_id, c(participant_id, recorded_visit), sep = "_", remove = FALSE) #%>% 
- # distinct(sample_id, .keep_all = TRUE) # remove duplicate sample IDs from the NCC methodology
+  unite(sample_id, c(participant_id, recorded_visit), sep = "_", remove = FALSE) %>% 
+ distinct(sample_id, .keep_all = TRUE) # remove duplicate sample IDs from the NCC methodology
+```
 
+```{r}
 endia_metadata %>% 
   distinct(participant_id, .keep_all = TRUE) %>% 
   group_by(deidentified_nest_id_new) %>%
@@ -40,19 +38,7 @@ endia_metadata %>%
     controls = sum(condition == "Control")) %>% 
     mutate(case_control_ratio = paste(cases, controls, sep = ":")) %>% 
    count(case_control_ratio, name = "number of nests")
-  
-#remove nests that dont have cases
-#make 1:1 ratio # remove weights in model
 ```
-
-
--------------
-Mission: How many kids have peptides aligning to these motifs and what are the levels of these motifs (how many peptides lay on this, and SUM abundance for individual in cases and controls )
-
-- align peptides per person to VP1 region, after alignnent show which peptides lay on the PSV motif and which lay on the PALTAVET motif 
--  see cases and controls have peptides against these motifs
-- then get levels of abundance (rpks) against these motifs
-
 
 Use data prepared in `01_figure_01_CXVB_antigen_mapping.Rmd`
 
@@ -61,6 +47,7 @@ endia_virscan_onset <- read_rds("cache/endia_virscan_metadata.rds") %>%
   filter(onset_visit == 1) %>% 
   group_by(sample_id) %>% 
   mutate(rpk = abundance / sum(abundance) * 100000) %>% 
+  mutate(log_lib = log(sum(abundance) + 1e-8)) %>% # add offset for testing 
   ungroup()
 
 vigr_virscan_metadata <- read_rds("cache/vigr_virscan_metadata.rds") %>% 
@@ -68,7 +55,6 @@ vigr_virscan_metadata <- read_rds("cache/vigr_virscan_metadata.rds") %>%
   mutate(rpk = abundance / sum(abundance) * 100000) %>% 
   ungroup()
 ```
-
 
 ```bash
 makeblastdb -in raw_data/conserved_ev_motifs.fasta -dbtype prot -out raw_data/blast_databases/conserved_ev_motifs_db
@@ -94,11 +80,6 @@ vigr_motif_results <- vigr_blastp_ev_motifs %>%
 
 ### Examine BLAST results
 
-*TODO*
-
-- remove genera with 0 abundance
-- possible redo BLAST with only EV peptides (as other genera have low peptide count ( <5 ) and low abundance in comparison to EV genus and could contribute to noise in the model)
-
 ```{r}
 endia_motif_w_genera <- endia_motif_results %>%
   group_by(saccver, condition, taxon_genus) %>% 
@@ -109,35 +90,12 @@ endia_motif_w_genera <- endia_motif_results %>%
             .groups = "drop")
 ```
 
-Figure showing all taxon genera 
-```{r}
-endia_motif_w_genera %>%
-  ggplot(aes(x = taxon_genus, y = log(total_rpk + 1), fill = condition)) +
-  geom_col(position = position_dodge(width = 0.9)) +
-  geom_text(aes(label = no_of_peptides), 
-            position = position_dodge(width = 0.9), 
-            vjust = -0.2, hjust = -0.7, size = 3) +
-  geom_text(aes(label = no_of_samples), 
-            position = position_dodge(width = 0.9), 
-            vjust = -2, hjust = -0.7, size = 3, color = "purple") +
-  coord_flip() +
-  facet_wrap(~ saccver) +
-  theme_minimal() +
-  theme(legend.position = "bottom") 
-
-# these genera have 0 abundance in our onset samples
-endia_motif_results %>% 
-  group_by(taxon_genus) %>%
-  summarise(total_rpk = sum(rpk)) %>% 
-  filter(total_rpk == 0) %>% # filter genus that have 0 abundance
-  pull(taxon_genus)
-```
-
-```{r}
+```{r, fig.height=8}
 endia_motif_w_genera %>%
   filter(taxon_genus == "Enterovirus") %>% 
   ggplot(aes(x = taxon_genus, y = total_rpk, fill = condition)) +
   geom_col(position = position_dodge(width = 0.9)) +
+  scale_fill_manual(values = c("Case" = "#d73027", "Control" = "#4575b4"), labels = c("Case", "Control")) +
   geom_text(aes(label = no_of_peptides), 
             position = position_dodge(width = 0.9), 
             vjust = -0.2, hjust = -0.7, size = 3) +
@@ -145,10 +103,18 @@ endia_motif_w_genera %>%
             position = position_dodge(width = 0.9), 
             vjust = -2, hjust = -0.7, size = 3, color = "purple") +
   facet_wrap(~ saccver) +
-  theme_minimal() +
-  theme(legend.position = "bottom") 
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "bottom",
+        line = element_blank(),
+      axis.text.x = element_blank(), 
+      strip.text = element_text(face = "bold")) +
+  labs(x = "Enterovirus peptides with significant hits", y = "Total normalised abundance", fill = "")
 ```
 
+This essentially shows that the same peptides (black numbers) are present in all participants (purple number) between case and control
+```{r, echo = FALSE, fig.height=8}
+ggsave("figures/ev_hits_to_motifs.png", width = 8, height = 7)
+```
 
 ### Stats
 
@@ -156,12 +122,12 @@ endia_motif_w_genera %>%
 endia_motif_for_stats <- endia_motif_results %>% 
   filter(taxon_genus == "Enterovirus") %>% 
   group_by(saccver, sample_id) %>% 
-  #group_by(saccver, sample_id, condition) %>% 
   mutate(total_rpk = sum(rpk)) %>% 
+  mutate(total_abundance = sum(abundance)) %>% 
   ungroup() %>% 
   select(saccver, sample_id, case, condition, taxon_genus, total_rpk, infant_id, mother_id, 
          deidentified_nest_id_new, age_at_sample_collection_days, infant_sex,
-         infant_HLA, weightTEDDY, maternal_T1D) %>% 
+         infant_HLA, weightTEDDY, maternal_T1D, total_abundance, log_lib) %>% 
   distinct(saccver, taxon_genus, sample_id, .keep_all = TRUE) %>% 
   mutate(age_sample_collection_month = age_at_sample_collection_days / 365 * 12) %>% 
   mutate(log_total_rpk = log(total_rpk + 1)) %>% 
@@ -182,8 +148,27 @@ endia_3d_model <- glmmTMB(formula = case ~ log_total_rpk + infant_HLA + age_samp
        data = endia_3d_motif_for_stats)
 
 endia_3d_model %>% broom.mixed::tidy(conf.int = TRUE, exponentiate = TRUE)
+
+summary(endia_3d_model)
 ```
 
+slightly lower AIC for no_nest model 
+*TODO: test other models to see if they are better without `(1|deidentified_nest_id_new)`*
+
+```{r}
+endia_3d_model_no_nest <- glmmTMB(formula = case ~ log_total_rpk + infant_HLA + age_sample_collection_month + infant_sex + maternal_T1D + (1|mother_id),
+       family = poisson(link = "log"),
+        weights = weightTEDDY,
+       data = endia_3d_motif_for_stats)
+  
+endia_3d_model_no_nest %>% broom.mixed::tidy(conf.int = TRUE, exponentiate = TRUE)
+
+anova(endia_3d_model, endia_3d_model_no_nest)
+```
+
+3D stratified by sex 
+
+No significance in abundances but HLA is significant in females 
 ```{r}
 endia_3d_motif_for_stats_xy <- endia_3d_motif_for_stats %>% filter(infant_sex == "Male")
 endia_3d_motif_for_stats_xx <- endia_3d_motif_for_stats %>% filter(infant_sex == "Female")
@@ -201,45 +186,23 @@ endia_3d_model_xx <- glmmTMB(formula = case ~ log_total_rpk + infant_HLA + age_s
 endia_3d_model_xx %>% broom.mixed::tidy(conf.int = TRUE, exponentiate = TRUE) 
 
 endia_3d_model_xy %>% broom.mixed::tidy(conf.int = TRUE, exponentiate = TRUE) 
-
-summary(endia_3d_model_xx)
 ```
 
 3d doesn't seem to be a good predictor, but enrichment of 3D in cases 
 
-try with offset ?? 
-```{r}
-glmmTMB(formula = total_rpk_int ~ case + infant_HLA + age_sample_collection_month + infant_sex + maternal_T1D + (1|deidentified_nest_id_new) + (1|mother_id),
+Trying with offset doesn't work well with case ~ total_abundance but is okay for total_abundance ~ case
+
+```{r, eval = FALSE}
+glmmTMB(formula = case ~ total_abundance + infant_HLA + age_sample_collection_month + infant_sex + maternal_T1D + (1|deidentified_nest_id_new) + (1|mother_id),
+        offset = log_lib,
        family = poisson(link = "log"),
         weights = weightTEDDY,
        data = endia_3d_motif_for_stats)
 
-endia_3d_motif_for_stats %>% mutate(total_rpk_scaled = scale(total_rpk)) 
-
-glmmTMB(formula = Condition ~ log_total_rpk + infant_HLA + age_sample_collection_month + infant_sex + maternal_T1D + (1|mother_id),
-       family = binomial(link = "logit"),
+glmmTMB(formula = total_abundance ~ Condition + infant_HLA + age_sample_collection_month + infant_sex + maternal_T1D + offset(log_lib) + (1|deidentified_nest_id_new) + (1|mother_id),
+       family = poisson(link = "log"),
         weights = weightTEDDY,
        data = endia_3d_motif_for_stats)
-
-```
-
-*This has good results without the deidentified nest!*
-```{r}
-glmmTMB(formula = Condition ~ log_total_rpk + infant_HLA + age_sample_collection_month + infant_sex + maternal_T1D + (1|mother_id) ,
-       family = binomial(link = "logit"),
-       weights = weightTEDDY,
-       data = endia_3d_motif_for_stats)
-
-```
-
-```{r}
-library(survival)
-
-clogit(
-  formula = case ~ log_total_rpk + infant_HLA + age_sample_collection_month + infant_sex + maternal_T1D + strata(deidentified_nest_id_new),
-  data = endia_3d_motif_for_stats,
-  weights = weightTEDDY,
-  method = "approximate")
 ```
 
 ### VP1 
@@ -267,7 +230,7 @@ endia_vp1_xy_model <- glmmTMB(formula = case ~ log_total_rpk + infant_HLA + age_
         weights = weightTEDDY,
        data = endia_vp1_motif_for_stats_xy)
 
-endia_vp1_xx_model <- glmmTMB(formula = case ~ log_total_rpk + infant_HLA + age_sample_collection_month + (1|deidentified_nest_id_new) + (1|mother_id),
+endia_vp1_xx_model <- glmmTMB(formula = case ~ log_total_rpk + infant_HLA + age_sample_collection_month + maternal_T1D + (1|deidentified_nest_id_new) + (1|mother_id),
        family = poisson(link = "log"),
         weights = weightTEDDY,
        data = endia_vp1_motif_for_stats_xx)
@@ -341,117 +304,6 @@ vigr_vp1_xy_model <- glmmTMB(formula = case ~ log_total_rpk + HLA_Status + Age +
 vigr_vp1_xy_model %>% broom.mixed::tidy(conf.int = TRUE, exponentiate = TRUE) 
 ```
 
-
-### old stuff :broom:
-
-```{r}
-endia_motif_results %>% 
-  select(saccver, condition, qaccver, infant_id, rpk, infant_sex, infant_HLA, maternal_T1D) %>% 
-  slice_sample(n = 20) %>% 
-  dput()
-  
-endia_motif_results %>% 
-  group_by(saccver, condition) %>% 
-  summarise(total_rpk = sum(rpk), .groups = "drop") %>% 
-  mutate(total_rpk_controls_divided_by_3 = ifelse(condition == "Control", total_rpk / 3, total_rpk))
-
-endia_motif_results %>% 
-  group_by(saccver, condition) %>% 
-  mutate(relative_abundance = rpk / sum(rpk)) %>% 
-  summarise(total_rpk = sum(relative_abundance), .groups = "drop")
-
-endia_motif_results %>% 
-  group_by(saccver, sample_id, condition) %>% 
-  summarise(total_rpk = sum(rpk), .groups = "drop")
-```
-
-
-
-------------------------probably delete --------------------------
-
-
-
-
-```{r}
-endia_ms <- read_rds("cache/endia_ms.rds")
-vigr_virscan_metadata <- read_rds("cache/vigr_virscan_metadata.rds")
-vigr_ms <- read_rds("cache/vigr_ms.rds")
-```
-
-Get number of cases that contribute to these peaks
-For this we need to keep the participants / sample_ids columns in so we can see how many samples that contribute to this peak (cannot take   `distinct(window_start)` as this removes all duplicated peptides)
-
-```{r}
-endia_ms_w_polyprot <- endia_ms %>%
-  fuzzy_left_join(coxsackievirusB1_P08291, by = c("start", "end"),
-                  match_fun = list(`>=`, `<=`)) %>% 
-  drop_na()
-
-
-endia_virscan_onset <- read_rds("cache/endia_virscan_metadata.rds") %>% 
-  filter(onset_visit == 1) 
-  
-endia_virscan_onset_selection <- endia_virscan_onset %>% 
-  select(pep_id, participant_id, sample_id, timepoint, condition, taxon_genus, taxon_species)
-
-test_endia_ms_w_polyprot <- endia_ms_w_polyprot %>% 
-  left_join(endia_virscan_onset_selection, by = join_by(seqid == pep_id), relationship = "many-to-many")
-
-test_get_peak_coordinates <- function(ms_w_pprot_df, ev_prot_name, ev_prot_start_col, condition = "cases") {
-  
-  # get the start coordinate for the given ev_protein_name
-  start_coord <- ms_w_pprot_df %>%
-    filter(ev_proteins == ev_prot_name) %>%
-    pull({{ev_prot_start_col}}) %>% 
-    unique()
-  
-  ms_w_pprot_df %>%
-    filter(ev_proteins == ev_prot_name) %>%
-    #distinct(window_start, .keep_all = TRUE) %>%
-    { if (condition == "cases") {
-      filter(., moving_sum > 0) 
-    } else if (condition == "controls") {
-      filter(., moving_sum < 0) 
-    } else {
-      stop("Invalid group. Please choose either 'cases' or 'controls'.")
-    }
-    }  %>%
-    select(participant_id, sample_id, seqid, window_start, window_end, moving_sum) %>% # add sample_id
-    mutate(start = window_start - start_coord,
-           end = window_end - start_coord) %>%
-    arrange(start, end) %>%
-    mutate(moving_sum = as.integer(moving_sum))
-}
-
-endia_cases_3D_peak_peptides_and_samples <- test_get_peak_coordinates(ms_w_pprot_df = test_endia_ms_w_polyprot,
-                     ev_prot_name = "3D",
-                     ev_prot_start_col = start.y,
-                     condition = "cases")
-
-
-test_get_peak_coordinates(ms_w_pprot_df = test_endia_ms_w_polyprot,
-                     ev_prot_name = "3D",
-                     ev_prot_start_col = start.y,
-                     condition = "controls") %>% 
-   filter(window_start >= 1735 & window_start <= 1754) %>% 
-  pull(sample_id) %>% 
-  unique() %>% 
-  length()
-
-# 14 peptides contribute to this peak 
-#present in 143 case samples and in 137 cases  
-
-endia_cases_3D_peak_peptides_and_samples %>% 
-  filter(window_start >= 1735 & window_start <= 1754) %>% 
-  pull(sample_id) %>% 
-  unique() %>% 
-  length()
-# VP1 peak if from: 572 -  585
-
-#- `moving_sum` > 1000 
-#- `start`: 14 = `window_start`: 1735
-#- `end`: 33 = `window_start`: 1754
-```
 -----------------------------------------------------
 
 ### Snippets
@@ -492,4 +344,53 @@ endia_vp1_xx_model_no_mumt1d <- glmmTMB(formula = case ~ log_total_rpk + infant_
         data = endia_vp1_motif_for_stats_xx)
 
 anova(endia_vp1_xx_model, endia_vp1_xx_model_no_mumt1d)
+```
+
+Looking at the other genera included in BLAST results
+
+- remove genera with 0 abundance
+- possible redo BLAST with only EV peptides (as other genera have low peptide count ( <5 ) and low abundance in comparison to EV genus and could contribute to noise in the model)
+
+Figure showing all taxon genera 
+```{r}
+endia_motif_w_genera %>%
+  ggplot(aes(x = taxon_genus, y = log(total_rpk + 1), fill = condition)) +
+  geom_col(position = position_dodge(width = 0.9)) +
+  geom_text(aes(label = no_of_peptides), 
+            position = position_dodge(width = 0.9), 
+            vjust = -0.2, hjust = -0.7, size = 3) +
+  geom_text(aes(label = no_of_samples), 
+            position = position_dodge(width = 0.9), 
+            vjust = -2, hjust = -0.7, size = 3, color = "purple") +
+ scale_fill_manual(values = c("Case" = "#d73027", "Control" = "#4575b4"), labels = c("Case", "Control")) +
+  coord_flip() +
+  facet_wrap(~ saccver) +
+  theme_minimal() +
+  theme(legend.position = "bottom") 
+
+# these genera have 0 abundance in our onset samples
+endia_motif_results %>% 
+  group_by(taxon_genus) %>%
+  summarise(total_rpk = sum(rpk)) %>% 
+  filter(total_rpk == 0) %>% # filter genus that have 0 abundance
+  pull(taxon_genus)
+```
+
+Trying with binomial model
+*This has good results without the deidentified nest!*
+```{r}
+endia_3d_model_binomial <- glmmTMB(formula = Condition ~ log_total_rpk + infant_HLA + age_sample_collection_month + infant_sex + maternal_T1D + (1|mother_id) ,
+       family = binomial(link = "logit"),
+       weights = weightTEDDY,
+       data = endia_3d_motif_for_stats) 
+
+summary(endia_3d_model_binomial)
+
+test <- glmmTMB(formula = Condition ~ total_abundance + infant_HLA + age_sample_collection_month + infant_sex + offset(log_lib) + maternal_T1D + (1|mother_id) ,
+       family = binomial(link = "logit"),
+       weights = weightTEDDY,
+       data = endia_3d_motif_for_stats) 
+
+summary(test)
+
 ```

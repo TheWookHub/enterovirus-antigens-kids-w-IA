@@ -152,6 +152,13 @@ endia_3d_model %>% broom.mixed::tidy(conf.int = TRUE, exponentiate = TRUE)
 summary(endia_3d_model)
 ```
 
+```{r}
+endia_3d_model <- glmmTMB(formula = case ~ log_total_rpk + infant_HLA + age_sample_collection_month + infant_sex + maternal_T1D + (1|deidentified_nest_id_new) + (1|mother_id),
+       family = poisson(link = "log"),
+        weights = weightTEDDY,
+       data = endia_3d_motif_for_stats)
+```
+
 slightly lower AIC for no_nest model 
 *TODO: test other models to see if they are better without `(1|deidentified_nest_id_new)`*
 
@@ -216,6 +223,15 @@ endia_vp1_model <- glmmTMB(formula = case ~ log_total_rpk + infant_HLA + age_sam
        data = endia_vp1_motif_for_stats)
 
 endia_vp1_model %>% broom.mixed::tidy(conf.int = TRUE, exponentiate = TRUE) 
+```
+
+```{r}
+endia_vp1_model_sex_inter <- glmmTMB(formula = case ~ log_total_rpk * infant_sex + infant_HLA + age_sample_collection_month + maternal_T1D + (1|deidentified_nest_id_new) + (1|mother_id),
+       family = poisson(link = "log"),
+        weights = weightTEDDY,
+       data = endia_vp1_motif_for_stats)
+
+summary(endia_vp1_model_sex_inter)
 ```
 
 Separate sexes 

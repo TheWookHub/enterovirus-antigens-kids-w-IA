@@ -292,8 +292,6 @@ vigr_top_genera_glms_tidy %>%
   theme(axis.text.y = element_text(size = 10, face = "italic")) 
 ```
 
-
-
 Testing binomial and poisson for VIGR. Interesting the AIC is lower for Binomial but the confidence intervals are a lot wider for Binomial. Also, speaking of which, the CI for the Intercept in both models is huge
 
 ```{r}

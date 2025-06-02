@@ -229,7 +229,9 @@ controls vs cases.
 ## Supplementary information :heavy_plus_sign:
 
 <details>
+
 <summary>
+
 <i> Figure 1 using `fold_change` instead of `moving_sum` </i>
 </summary>
 
@@ -398,5 +400,56 @@ wrap_elements(combined_proper_fc_nl_ms_plots) +
 ```
 
 ![](01_figure_01_CXVB_antigen_mapping_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
+
+</details>
+
+<details>
+
+<summary>
+
+<i> Test enrichment plot following removal of controls that
+seroconverted to cases </i>
+</summary>
+
+### Snippet to test removing controls that seroconverted to cases does not significantly alter our finding
+
+``` r
+endia_plot <- endia_ms_plot + 
+  ggtitle("") +
+  theme(legend.position = "bottom") +
+   labs(y = expression(sum((bar(X)[rpk_cases] - bar(X)[rpk_controls])))) 
+
+(EV_B1_plot / endia_plot) + plot_layout(heights = c(0.3, 3))
+```
+
+![](01_figure_01_CXVB_antigen_mapping_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
+
+``` r
+ggsave("figures/endia_enrichment_cvb1.jpg", width = 10, height = 5, dpi = 300)
+
+# remove controls that seroconverted to cases 
+
+endia_virscan_onset_clean <- endia_virscan_onset %>% 
+ group_by(participant_id) %>%
+ filter(!(all(c("Case", "Control") %in% condition) & condition == "Control")) %>%
+ ungroup()
+
+endia_fc_clean <- calculate_rpk_fold_change(endia_virscan_onset_clean, sample_id, condition, pep_id, abundance, ENDIA_blastp_evB1)
+
+endia_ms_clean <- calculate_moving_sum(endia_fc_clean, value_column = fold_change, win_size = 32, step_size = 4)
+
+endia_plot_clean <- endia_ms_clean %>% 
+ ms_plot_clean()
+
+ggsave("figures/endia_enrichment_cvb1_fake_CTRLS_removed.jpg", width = 10, height = 5, dpi = 300)
+
+EV_B1_plot / endia_plot_clean / endia_plot + plot_layout(heights = c(0.3, 3, 3)) 
+```
+
+![](01_figure_01_CXVB_antigen_mapping_files/figure-gfm/unnamed-chunk-18-2.png)<!-- -->
+
+``` r
+ggsave("figures/endia_enrichment_cvb1_comparison_w_w_ctrls_removed.jpg", width = 10, height = 8, dpi = 300)
+```
 
 </details>

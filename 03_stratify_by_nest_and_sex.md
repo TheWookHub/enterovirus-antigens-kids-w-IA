@@ -92,7 +92,7 @@ ENDIA_signal_per_nest_plots <- endia_virscan_onset_complete_nests %>%
 ## Sex stratification in both cohorts
 
 ``` r
-endia_sex_stratified <- endia_virscan_onset_complete_nests %>%
+endia_sex_stratified <- endia_virscan_onset %>%
   group_by(infant_sex) %>% 
   group_map(~ .x %>%
     calculate_rpk_fold_change(sample_id, condition, pep_id, abundance, ENDIA_blastp_evB1) %>%
@@ -135,3 +135,64 @@ cohorts_sex_plot_with_yaxis <- wrap_elements(cohorts_sex_plot) +
 ```
 
 ![](03_stratify_by_nest_and_sex_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
+
+Same plot but modified for paper
+
+Stack ENDIA plot below VIGR and make y-axis the same for males and
+females in each cohort for comparison purposes
+
+``` r
+### ENDIA
+
+endia_sex_stratified_ms <- endia_virscan_onset %>%
+  group_by(infant_sex) %>% 
+  group_map(~ .x %>%
+    calculate_rpk_fold_change(sample_id, condition, pep_id, abundance, ENDIA_blastp_evB1) %>%
+    calculate_moving_sum(fold_change, 32, 4) %>% 
+          mutate(infant_sex = .y$infant_sex), # return group label back
+    .keep = TRUE)
+
+#make into dataframe to get the y_limit range 
+endia_sex_stratified_combined <- list_rbind(endia_sex_stratified_ms)
+endia_y_limits <- range(endia_sex_stratified_combined$moving_sum, na.rm = TRUE)
+
+#plot
+endia_sex_stratified_plots <- endia_sex_stratified_ms %>%
+  map(~ ms_plot_clean(.x) + ylim(endia_y_limits))
+
+endia_sex_plots_same_y <- wrap_plots(EV_B1_plot + ggtitle("ENDIA"), wrap_plots(endia_sex_stratified_plots, ncol = 1) +
+             labs(x = "Position in sequence (amino acids)")  + theme(legend.position = "bottom"), ncol = 1, heights = c(0.3, 3)) 
+
+### VIGR 
+vigr_sex_stratified_ms <- vigr_virscan_metadata %>%
+  group_by(Sex) %>% 
+  group_map(~ .x %>%
+    calculate_rpk_fold_change(sample_id, Condition, pep_id, abundance, VIGR_blastp_evB1) %>%
+    calculate_moving_sum(fold_change, 32, 4) %>%
+     mutate(Sex = .y$Sex),
+    .keep = TRUE)
+
+#make into dataframe to get the y_limit range 
+vigr_sex_stratified_combined <- list_rbind(vigr_sex_stratified_ms)
+vigr_y_limits <- range(vigr_sex_stratified_combined$moving_sum, na.rm = TRUE)
+
+#plot 
+vigr_sex_stratified_ms_plots <- vigr_sex_stratified_ms %>%
+  map(~ ms_plot_clean(.x) + ylim(vigr_y_limits))
+
+vigr_sex_plots_same_y <- wrap_plots(EV_B1_plot + ggtitle("VIGR"), wrap_plots(vigr_sex_stratified_ms_plots, ncol = 1) +
+             labs(x = "") + theme(legend.position = "none"), ncol = 1, heights = c(0.3, 3)) &
+  theme(plot.margin = margin(5.5, 5.5, 5.5, 0))
+
+### Combine ENDIA and VIGR plots 
+
+cohorts_sex_plot_same_y <- wrap_plots(vigr_sex_plots_same_y, endia_sex_plots_same_y, ncol = 1)
+
+cohorts_sex_plot_same_yaxis_stacked <- wrap_elements(cohorts_sex_plot_same_y) +
+  labs(tag = expression(sum((bar(X)[rpk_cases] - bar(X)[rpk_controls])))) +
+  theme(
+    plot.tag = element_text(size = rel(1.5), angle = 90),
+    plot.tag.position = "left")
+```
+
+![](03_stratify_by_nest_and_sex_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->

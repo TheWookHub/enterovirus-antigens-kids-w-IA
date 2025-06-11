@@ -7,7 +7,7 @@ ms_plot_clean <- function(moving_sum_dataframe){
     ggplot(aes(x = (window_start + window_end) / 2, y = moving_sum, fill = Condition)) +
     geom_bar(stat = "identity") +
     labs(x = "", fill = "", y = "") +
-    theme_minimal() +
+    theme_minimal(base_size = 14) +
     theme(panel.grid.minor = element_blank(),
           panel.grid.major = element_blank()) +
     scale_fill_manual(values = c("Case" = "#d73027", "Control" = "#4575b4"), labels = c("Case", "Control")) +

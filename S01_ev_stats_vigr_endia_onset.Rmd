@@ -142,7 +142,7 @@ tidy_models_data_table <- tidy_models_data %>%
     locations = cells_row_groups(groups = c("ENDIA", "VIGR"))
   )
 
-tidy_models_data_table
+as_raw_html(tidy_models_data_table)
 
 ```
 

@@ -1,0 +1,283 @@
+---
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, options(readr.show_col_types = FALSE))
+```
+ 
+# Statistical comparison of *Enterovirus* abundance between cases and controls in VIGR and ENDIA onset
+
+```{r}
+library(tidyverse)
+library(glmmTMB)
+library(gt)
+```
+
+
+```{r}
+endia_virscan_onset <- read_rds("cache/endia_virscan_metadata.rds") %>% 
+  filter(onset_visit == 1) %>% 
+  group_by(sample_id) %>% 
+  mutate(rpk = abundance / sum(abundance) * 100000) %>% 
+  mutate(log_lib = log(sum(abundance) + 1e-8)) %>% 
+  ungroup()
+
+endia_for_stats <- endia_virscan_onset %>% 
+  group_by(sample_id, taxon_genus) %>% 
+  mutate(total_rpk = sum(rpk),
+         total_abundance = sum(abundance)) %>% 
+  ungroup() %>% 
+  distinct(taxon_genus, sample_id, .keep_all = TRUE) %>% 
+  mutate(across(c(infant_HLA, infant_id, mother_id, maternal_T1D, deidentified_nest_id_new, infant_sex), as.factor),
+        age_sample_collection_month = age_at_sample_collection_days / 365 * 12,
+        age_c = scale(age_at_sample_collection_days),
+        log_total_rpk = log(total_rpk + 1),
+        Condition = factor(condition, levels = c("Control", "Case"), labels = c("Control", "Case")))
+```
+
+```{r}
+endia_ev_for_stats <- endia_for_stats %>% filter(taxon_genus == "Enterovirus")
+
+endia_ev_model_poisson <- glmmTMB(formula = case ~ log_total_rpk + infant_HLA + age_sample_collection_month + infant_sex + maternal_T1D + (1|deidentified_nest_id_new) + (1|mother_id),
+       family = poisson(link = "log"),
+        weights = weightTEDDY,
+       data = endia_ev_for_stats)
+
+endia_ev_model_poisson_tidy <- endia_ev_model_poisson %>%
+    broom.mixed::tidy(effect = "fixed", conf.int = TRUE, exponentiate = TRUE) %>% 
+        rename(RR = estimate,
+               `CI lower` = conf.low,
+               `CI upper` = conf.high) %>% 
+    select(term, RR, `CI lower`, `CI upper`, p.value) %>% 
+    add_column(cohort = "ENDIA")
+```
+
+```{r}
+vigr_virscan_metadata <- read_rds("cache/vigr_virscan_metadata.rds") %>% 
+ group_by(sample_id) %>% 
+  mutate(rpk = abundance / sum(abundance) * 100000,
+         log_lib = log(sum(abundance) + 1e-8)) %>% 
+  ungroup() %>% 
+  mutate(Nest = str_extract(sample_id, "\\d+"))
+
+# adding diabetes relative as confounder 
+vigr_extra_metadata <- readxl::read_xlsx("raw_data/metadata/VIGR_HLA.xlsx") %>% 
+  select(Participant_Id, UNSW, Diabetes) %>% 
+  mutate(Diabetes = if_else(Diabetes %in% c("Brother", "Sister"), "Sibling", Diabetes)) 
+
+vigr_virscan_metadata_w_diabetes <- vigr_virscan_metadata %>% 
+  left_join(vigr_extra_metadata, join_by(sample_id == Participant_Id, UNSW))
+
+
+vigr_for_stats <- vigr_virscan_metadata_w_diabetes %>% 
+  group_by(sample_id, taxon_genus) %>%
+  mutate(total_rpk = sum(rpk),
+         total_abundance = sum(abundance)) %>% 
+  ungroup() %>% 
+  distinct(taxon_genus, sample_id, .keep_all = TRUE) %>% 
+  mutate(case = ifelse(Condition == "Case", 1, 0),
+        log_total_rpk = log(total_rpk + 1),
+        across(c(HLA_Status, Sex, Nest, Diabetes, My_name), as.factor)) %>% 
+  mutate(Condition = factor(Condition, levels = c("Control", "Case"), labels = c("Control", "Case")))
+
+vigr_ev_for_stats <- vigr_for_stats %>% filter(taxon_genus == "Enterovirus")
+
+vigr_ev_model_poisson <- glmmTMB(case ~ log_total_rpk + HLA_Status + Age + Sex + Diabetes + (1|Nest) + (1|My_name),
+                                family = poisson(link = "log"),
+                                data = vigr_ev_for_stats)
+
+vigr_ev_model_poisson_tidy <- vigr_ev_model_poisson %>%  
+  broom.mixed::tidy(effect = "fixed", conf.int = TRUE, exponentiate = TRUE) %>% 
+        rename(RR = estimate,
+               `CI lower` = conf.low,
+               `CI upper` = conf.high) %>% 
+    select(term, RR, `CI lower`, `CI upper`, p.value) %>% 
+    add_column(cohort = "VIGR")
+```
+
+```{r}
+tidy_models_data <- rbind(endia_ev_model_poisson_tidy, vigr_ev_model_poisson_tidy)
+```
+
+```{r}
+library(gt)
+
+tidy_models_data_table <- tidy_models_data %>%
+  select(-cohort) %>% 
+  mutate(term = case_when(
+    term == "log_total_rpk" ~ "log(EV)",
+    term == "(Intercept)" ~ "Intercept",
+    TRUE ~ term
+  )) %>% 
+  gt(rowname_col = "term") %>%
+  tab_header(
+    title = "Summary of GLM model tests"
+  ) %>%
+  cols_label(
+    term = "Predictor",
+    RR = "RR",
+    `CI lower` = "CI Lower",
+    `CI upper` = "CI Upper",
+    p.value = "Pr(>|z|)"
+  ) %>%
+  fmt_number(
+    columns = c(RR, `CI lower`, `CI upper`, p.value),
+    decimals = 3
+  ) %>%
+  cols_align(
+    align = "left",
+    columns = everything()
+  ) %>% 
+  tab_row_group(
+    label = "ENDIA",
+    rows = 1:8
+  ) %>% 
+  tab_row_group(
+    label = "VIGR",
+    rows = 9:16
+  ) %>% 
+  tab_style(
+    style = cell_fill(color = "lightgrey"),
+    locations = cells_row_groups(groups = c("ENDIA", "VIGR"))
+  )
+
+tidy_models_data_table
+
+```
+
+```{r}
+gtsave(tidy_models_data_table, "figures/glm_results_vigr_endia_onset.png")
+```
+
+## Supplementary information :heavy_plus_sign:
+
+<details>
+  <summary><i> Abundance as outcome instead of case status </i></summary>
+
+### Enterovirus genus only for both ENDIA and VIGR
+
+**ENDIA** 
+
+```{r}
+endia_ev_model_w_abundance <- glmmTMB(formula = total_abundance ~ Condition + infant_HLA + age_sample_collection_month + infant_sex + maternal_T1D + (1|deidentified_nest_id_new) + (1|mother_id),
+       family = poisson(link = "log"),
+        weights = weightTEDDY,
+       data = endia_ev_for_stats)
+
+endia_ev_model_w_abundance %>% summary()
+
+endia_ev_model_w_abundance %>% 
+  broom.mixed::tidy(effects = "fixed", conf.int = TRUE, exponentiate = TRUE) %>% 
+  select(term, estimate, p.value, conf.low, conf.high)
+```
+
+**VIGR**
+
+```{r}
+
+vigr_ev_model_w_abundance <- glmmTMB(total_abundance ~ Condition + HLA_Status + Age + Sex + Diabetes + (1|Nest) + (1|My_name),
+                                family = poisson(link = "log"),
+                                offset = log_lib,
+                                data = vigr_ev_for_stats) 
+
+vigr_ev_model_w_abundance %>% summary()
+
+vigr_ev_model_w_abundance %>% 
+ broom.mixed::tidy(effects = "fixed", conf.int = TRUE, exponentiate = TRUE) %>% 
+ select(term, estimate, p.value, conf.low, conf.high)
+```
+
+### Adding additional genera for ENDIA 
+
+Getting the top genera present in both cases and controls
+
+```{r}
+endia_top_genera_in_both_conditions <- endia_virscan_onset %>%
+  group_by(condition, taxon_genus) %>%
+  summarise(total_abundance = sum(abundance, na.rm = TRUE), .groups = "drop") %>%
+  group_by(condition) %>%
+  slice_max(total_abundance, n = 16) %>%  # get top 16 abundant genera per condition
+  ungroup() %>%
+  semi_join(            # keep only genera that appear in both conditions' top 16
+    count(., taxon_genus) %>% filter(n == 2), 
+    by = "taxon_genus"
+  ) %>%
+  group_by(taxon_genus) %>%
+  mutate(total_abundance_overall = sum(total_abundance)) %>% # get total abundance for both conditions combined per genus
+  ungroup() %>%
+  arrange(desc(total_abundance_overall), taxon_genus, condition) # arrange so top most abundant genera are first
+
+endia_top_genera <- endia_top_genera_in_both_conditions %>% pull(taxon_genus) %>% unique()
+
+endia_top_genera
+```
+
+```{r}
+# Function to fit a GLM model for a single genus 
+run_glms_on_endia_genera_abundance <- function(df) {
+  
+  unique_genera <- df %>% pull(taxon_genus) %>% unique()
+  
+   map(set_names(unique_genera), function(genus) {
+    single_genus_data <- df %>% filter(taxon_genus == genus)
+    
+    glmmTMB(formula = total_abundance ~ Condition + infant_HLA + age_sample_collection_month + infant_sex + maternal_T1D + (1|deidentified_nest_id_new) + (1|mother_id),
+                   weights = weightTEDDY, 
+                   data = single_genus_data,
+                   offset = log_lib,
+                   family = poisson(link = "log"))
+  })
+}
+
+# extract and tidy GLM results
+
+tidy_glm_results <- function(glm_list) {
+  tidy_glm_results_list <- map(names(glm_list), function(genus) {
+    broom.mixed::tidy(glm_list[[genus]], effects = "fixed", conf.int = TRUE, exponentiate = TRUE) %>%
+      mutate(genus = genus, .before = effect) %>% 
+      rename(risk_ratio = estimate,
+         ci_low = conf.low,
+         ci_high = conf.high)
+  })
+  
+  # combine results into a single dataframe and apply multiple testing correction
+  list_rbind(tidy_glm_results_list) %>%
+    mutate(p_adjust_BH = p.adjust(p.value, method = "BH")) %>% 
+    mutate(significant = ifelse(p_adjust_BH <= 0.10, T, F))
+}
+```
+
+```{r}
+endia_abundance_top_genera <- endia_for_stats %>% filter(taxon_genus %in% endia_top_genera) # top 14 in cases and control
+
+endia_abundance_top_genera_glms <- run_glms_on_endia_genera_abundance(endia_abundance_top_genera)
+
+endia_abundance_top_genera_glms_tidy <- tidy_glm_results(endia_abundance_top_genera_glms)
+```
+
+
+```{r}
+endia_abundance_top_genera_glms_tidy %>% 
+  filter(genus != "Simplexvirus") %>% 
+  filter(genus != "Lentivirus") %>% 
+  filter(genus != "Mamastrovirus") %>% 
+  filter(genus != "Roseolovirus") %>% 
+  filter(term == "ConditionCase") %>% 
+  mutate(genus_w_pvalue = paste(genus, "(",round(p_adjust_BH, digits = 2),")")) %>% 
+  arrange(desc(risk_ratio)) %>% 
+  mutate(genus_w_pvalue = factor(genus_w_pvalue, levels = rev(unique(genus_w_pvalue)))) %>% 
+  ggplot(aes(x = risk_ratio, y = genus_w_pvalue)) +
+  geom_point(color = "black") +
+  geom_errorbarh(aes(xmin = ci_low, xmax = ci_high), height = 0.2, color = "black") +
+  geom_vline(xintercept = 1, linetype = "dashed", color = "red") + # Reference line
+  theme_minimal() +
+  labs(x = "Risk Ratio", y = "Genus and adjusted BH P value") +
+  theme(axis.text.y = element_text(size = 10, face = "italic")) 
+```
+
+
+
+
+
+

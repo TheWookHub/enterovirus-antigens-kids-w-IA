@@ -61,14 +61,13 @@ vigr_virscan_metadata <- read_rds("cache/vigr_virscan_metadata.rds") %>%
   ungroup() %>% 
   mutate(Nest = str_extract(sample_id, "\\d+"))
 
-# adding diabetes relative as confounder 
+# adding maternal_T1D status similar to ENDIA
 vigr_extra_metadata <- readxl::read_xlsx("raw_data/metadata/VIGR_HLA.xlsx") %>% 
-  select(Participant_Id, UNSW, Diabetes) %>% 
-  mutate(Diabetes = if_else(Diabetes %in% c("Brother", "Sister"), "Sibling", Diabetes)) 
+  select(Participant_Id, UNSW, Diabetes, Risk_group) %>% 
+  mutate(maternal_T1D = if_else(Diabetes == "Mother", "1", "0"))
 
 vigr_virscan_metadata_w_diabetes <- vigr_virscan_metadata %>% 
   left_join(vigr_extra_metadata, join_by(sample_id == Participant_Id, UNSW))
-
 
 vigr_for_stats <- vigr_virscan_metadata_w_diabetes %>% 
   group_by(sample_id, taxon_genus) %>%
@@ -78,12 +77,12 @@ vigr_for_stats <- vigr_virscan_metadata_w_diabetes %>%
   distinct(taxon_genus, sample_id, .keep_all = TRUE) %>% 
   mutate(case = ifelse(Condition == "Case", 1, 0),
         log_total_rpk = log(total_rpk + 1),
-        across(c(HLA_Status, Sex, Nest, Diabetes, My_name), as.factor)) %>% 
+        across(c(HLA_Status, Sex, Nest, maternal_T1D, My_name), as.factor)) %>% 
   mutate(Condition = factor(Condition, levels = c("Control", "Case"), labels = c("Control", "Case")))
 
 vigr_ev_for_stats <- vigr_for_stats %>% filter(taxon_genus == "Enterovirus")
 
-vigr_ev_model_poisson <- glmmTMB(case ~ log_total_rpk + HLA_Status + Age + Sex + Diabetes + (1|Nest) + (1|My_name),
+vigr_ev_model_poisson <- glmmTMB(case ~ log_total_rpk + HLA_Status + Age + Sex + maternal_T1D + (1|Nest) + (1|My_name),
                                 family = poisson(link = "log"),
                                 data = vigr_ev_for_stats)
 
@@ -135,7 +134,7 @@ tidy_models_data_table <- tidy_models_data %>%
   ) %>% 
   tab_row_group(
     label = "VIGR",
-    rows = 9:16
+    rows = 9:15
   ) %>% 
   tab_style(
     style = cell_fill(color = "lightgrey"),

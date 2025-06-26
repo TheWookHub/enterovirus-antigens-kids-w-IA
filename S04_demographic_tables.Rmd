@@ -1,0 +1,97 @@
+---
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, options(readr.show_col_types = FALSE))
+```
+
+## Demographic tables
+
+**VIGR** 
+
+```{r}
+library(tidyverse)
+library(gt)
+```
+
+Read in data and remove cases and associated controls before seroconversion 
+```{r}
+vigr_metadata <- read.csv("raw_data/metadata/vigr_sample_info.csv")[-1] %>% 
+   mutate(Replicate = paste0("t", Replicate)) %>% 
+  filter(Replicate != "t1") #remove cases and ass. controls before seroconversion
+
+vigr_more_metadata <- readxl::read_xlsx("raw_data/metadata/VIGR_HLA.xlsx") %>%
+  mutate(Sample = paste0("UNSW_", UNSW)) %>% 
+  select(-c(HLA_category, Notes, HLA_Status)) %>% 
+  mutate(Diabetes = if_else(Diabetes %in% c("Brother", "Sister"), "Sibling", Diabetes)) 
+
+vigr_all_metadata <- vigr_metadata %>% left_join(vigr_more_metadata, by = join_by(Sample, Participant_Id, UNSW))
+```
+
+Helper function to summarise categorical variables
+
+```{r}
+summarise_cat <- function(data, var) {
+  data %>%
+    count(Condition, {{ var }}) %>%
+    group_by(Condition) %>%
+    mutate(pct = round(100 * n / sum(n)),
+           label = paste0(n, " (", pct, "%)")) %>%
+    select(Condition, {{ var }}, label) %>%
+    pivot_wider(names_from = Condition, values_from = label) %>% 
+    rename(Characteristic = {{ var }})
+}
+```
+
+Summarise characteristics and create table dataframe 
+```{r}
+sex_summary <- summarise_cat(vigr_all_metadata, Sex) %>% 
+    mutate(Characteristic = case_match(Characteristic, !!!c("F" ~ "Female", "M" ~ "Male")))
+
+hla_summary <- summarise_cat(vigr_all_metadata, HLA_Status) %>% 
+  mutate(Characteristic = ifelse(Characteristic == "Low_Risk", "Low Risk", Characteristic))
+
+age_summary <- vigr_all_metadata %>%
+  group_by(Condition) %>%
+  summarise(label = sprintf("%.1f (%.1f)", mean(`Age (years)`), sd(`Age (years)`))) %>%
+  pivot_wider(names_from = Condition, values_from = label) %>%
+  mutate(Characteristic = "Mean age at sampling (SD)") %>%
+  select(Characteristic, Case, Control)
+
+section_headers <- tibble(
+  Characteristic = c("Sex", "HLA Status", "Relative with type 1 diabetes"),
+  Case = "", Control = "")
+
+vigr_table_data <- bind_rows(
+  age_summary,
+  section_headers[1,], sex_summary,
+  section_headers[2,], hla_summary,
+)
+```
+
+"Plot" table with `gt` 
+```{r}
+vigr_demographic_table <- vigr_table_data %>%
+  gt() %>%
+  tab_header(title = "Demographic Summary of VIGR Participants") %>%
+  cols_label(
+    Case = html("Case (n = 21)"),
+    Control = html("Control (n = 21)")
+  ) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_body(
+      columns = 1,
+      rows = vigr_table_data$Characteristic %in% section_headers$Characteristic
+    )
+  ) %>%
+  cols_label(Characteristic = "")  # Remove column label
+
+as_raw_html(vigr_demographic_table)
+```
+
+
+```{r, echo = FALSE}
+gtsave(vigr_demographic_table, "figures/vigr_demographic_table.png")
+```

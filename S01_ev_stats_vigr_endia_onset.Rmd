@@ -46,10 +46,6 @@ endia_ev_model_poisson <- glmmTMB(formula = case ~ log_total_rpk + infant_HLA + 
 
 endia_ev_model_poisson_tidy <- endia_ev_model_poisson %>%
     broom.mixed::tidy(effect = "fixed", conf.int = TRUE, exponentiate = TRUE) %>% 
-        rename(RR = estimate,
-               `CI lower` = conf.low,
-               `CI upper` = conf.high) %>% 
-    select(term, RR, `CI lower`, `CI upper`, p.value) %>% 
     add_column(cohort = "ENDIA")
 ```
 
@@ -88,27 +84,22 @@ vigr_ev_model_poisson <- glmmTMB(case ~ log_total_rpk + HLA_Status + Age + Sex +
 
 vigr_ev_model_poisson_tidy <- vigr_ev_model_poisson %>%  
   broom.mixed::tidy(effect = "fixed", conf.int = TRUE, exponentiate = TRUE) %>% 
-        rename(RR = estimate,
-               `CI lower` = conf.low,
-               `CI upper` = conf.high) %>% 
-    select(term, RR, `CI lower`, `CI upper`, p.value) %>% 
     add_column(cohort = "VIGR")
 ```
 
 ```{r}
-tidy_models_data <- rbind(endia_ev_model_poisson_tidy, vigr_ev_model_poisson_tidy)
+tidy_models_data <- rbind(endia_ev_model_poisson_tidy, vigr_ev_model_poisson_tidy) %>% 
+    dplyr::rename(RR = estimate,
+               `CI lower` = conf.low,
+               `CI upper` = conf.high) %>% 
+    select(term, RR, `CI lower`, `CI upper`, p.value, cohort) %>% 
+    filter(term != "(Intercept)")
 ```
 
 ```{r}
-library(gt)
-
 tidy_models_data_table <- tidy_models_data %>%
+  mutate(term = case_match(term, !!!c("log_total_rpk" ~ "log(EV)"), .default = term)) %>% 
   select(-cohort) %>% 
-  mutate(term = case_when(
-    term == "log_total_rpk" ~ "log(EV)",
-    term == "(Intercept)" ~ "Intercept",
-    TRUE ~ term
-  )) %>% 
   gt(rowname_col = "term") %>%
   tab_header(
     title = "Summary of GLM model tests"
@@ -130,11 +121,11 @@ tidy_models_data_table <- tidy_models_data %>%
   ) %>% 
   tab_row_group(
     label = "ENDIA",
-    rows = 1:8
+    rows = 1:7
   ) %>% 
   tab_row_group(
     label = "VIGR",
-    rows = 9:15
+    rows = 8:13
   ) %>% 
   tab_style(
     style = cell_fill(color = "lightgrey"),
@@ -145,7 +136,7 @@ as_raw_html(tidy_models_data_table)
 
 ```
 
-```{r}
+```{r, echo = FALSE}
 gtsave(tidy_models_data_table, "figures/glm_results_vigr_endia_onset.png")
 ```
 
@@ -221,10 +212,9 @@ run_glms_on_endia_genera_abundance <- function(df) {
    map(set_names(unique_genera), function(genus) {
     single_genus_data <- df %>% filter(taxon_genus == genus)
     
-    glmmTMB(formula = total_abundance ~ Condition + infant_HLA + age_sample_collection_month + infant_sex + maternal_T1D + (1|deidentified_nest_id_new) + (1|mother_id),
+    glmmTMB(formula = total_abundance ~ Condition + infant_HLA + age_sample_collection_month + infant_sex + maternal_T1D + offset(log_lib) + (1|deidentified_nest_id_new) + (1|mother_id),
                    weights = weightTEDDY, 
                    data = single_genus_data,
-                   offset = log_lib,
                    family = poisson(link = "log"))
   })
 }
@@ -272,7 +262,8 @@ endia_abundance_top_genera_glms_tidy %>%
   geom_vline(xintercept = 1, linetype = "dashed", color = "red") + # Reference line
   theme_minimal() +
   labs(x = "Risk Ratio", y = "Genus and adjusted BH P value") +
-  theme(axis.text.y = element_text(size = 10, face = "italic")) 
+  theme(axis.text.y = element_text(size = 10, face = "italic")) +
+  xlim(0, 4)
 ```
 
 

@@ -6,250 +6,428 @@ output: github_document
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, options(readr.show_col_types = FALSE))
 ```
 
-# Testing significance of the peaks in the 3D region and VP1 region
+# Statistical testing of antigen levels against motifs in *Enterovirus* VP1 and 3D region peaks
 
 ```{r}
 library(tidyverse)
-library(ampir)
-library(patchwork)
 source("scripts/read_blast.R")
-source("scripts/calculate_rpk_fold_change.R")
-source("scripts/calculate_moving_sum.R")
+library(glmmTMB)
+library(gt)
 ```
 
-Read in Cohort datasets generated in `01_figure_01_CXVB_epitope_mapping.Rmd`
+Use data prepared in `01_figure_01_CXVB_antigen_mapping.Rmd`
 
 ```{r}
-endia_virscan_onset <- read_rds("cache/endia_virscan_metadata.rds") %>% 
-  filter(onset_visit == 1)
-
-ENDIA_blastp_evB1 <- read_blast("raw_data/blast_results/blastp_endia_evB1_all_virscan_peps.blast")
+endia_virscan_onset <- read_rds("cache/endia_virscan_metadata.rds") %>%
+  filter(onset_visit == 1) %>% 
+  group_by(sample_id) %>% 
+  mutate(rpk = abundance / sum(abundance) * 100000) %>% 
+  mutate(log_lib = log(sum(abundance) + 1e-8)) %>% # add offset for testing 
+  ungroup()
 
 vigr_virscan_metadata <- read_rds("cache/vigr_virscan_metadata.rds") %>% 
-  mutate(Nest = str_extract(sample_id, "\\d+"))
-
-VIGR_blastp_evB1 <- read_blast("raw_data/blast_results/blastp_vigr_evB1_all_virscan_peps.blast")
-```
-
-## Test peak significance in the 3D region 
-
-The 3D peak region of interest was obtained from `02_figure_02_alignments.Rmd`
-
-#- `start`: 16 = `window_start`: 1737 #1735 for ENDIA
-#- `end`: 33 = `window_start`: 1754
-
-**VIGR**
-
-Plot per nest 
-
-```{r}
-ms_plot_clean_3d_peak_annot <- function(moving_sum_dataframe){
-  #plot without x axis label or legend position for easier plot stacking
-  moving_sum_dataframe %>% 
-    distinct(window_start, .keep_all = TRUE) %>% #remove duplicate windows to avoid overstacking
-    mutate(Condition = if_else(moving_sum > 0, "Case", "Control")) %>% 
-    ggplot(aes(x = (window_start + window_end) / 2, y = moving_sum, fill = Condition)) +
-    geom_rect(aes(xmin = 1737, xmax = 1754, ymin = -Inf, ymax = Inf), fill = "gray", alpha = 0.3) +
-    geom_bar(stat = "identity") +
-    labs(x = "", fill = "", y = "") +
-    theme_minimal() +
-    theme(panel.grid.minor = element_blank(),
-          panel.grid.major = element_blank()) +
-    scale_fill_manual(values = c("Case" = "#d73027", "Control" = "#4575b4"), labels = c("Case", "Control")) +
-    theme(legend.position = "none")
-}
-```
-
-```{r, fig.height=10, fig.width=10}
-VIGR_signal_per_nest_plots <- vigr_virscan_metadata %>%
-  group_by(Nest) %>%
-  arrange(Age) %>%
-  group_map(~ .x %>%
-    calculate_rpk_fold_change(sample_id, Condition, pep_id, abundance, VIGR_blastp_evB1) %>%
-    calculate_moving_sum(value_column = fold_change, win_size = 32, step_size = 4) %>%
-    ms_plot_clean_3d_peak_annot() + 
-      ggtitle(paste("Nest", unique(.x$Nest), "- Age", unique(.x$Age))) +
-      theme(
-        plot.title = element_text(size = 10)
-      ),
-    .keep = TRUE
-  )
-
-wrap_plots(VIGR_signal_per_nest_plots, ncol = 3)
-```
-
-```{r}
-vigr_3D_peak_region_per_nest <- vigr_virscan_metadata %>%
-  group_by(Nest) %>%
-  group_map(~ .x %>%
-    calculate_rpk_fold_change(sample_id, Condition, pep_id, abundance, VIGR_blastp_evB1) %>%
-    calculate_moving_sum(value_column = fold_change, win_size = 32, step_size = 4) %>% 
-      add_column(nest = unique(.x$Nest)) %>% 
-      filter(window_start >= 1737 & window_start <= 1754) %>% 
-      distinct(window_start, .keep_all = TRUE), 
-    .keep = TRUE)
-```
-
-```{r}
-count_peaks <- function(df) {
-  df %>%
-    mutate(condition = ifelse(moving_sum > 0, "Case", "Control")) %>% #TODO: change >0 to maybe >1000. Or maybe use mean per condition. above this mean is peak, below mean is no peak
-    count(condition, nest, name = "number_of_peaks") %>%
-    complete(condition = c("Case", "Control"), nest = unique(df$nest), fill = list(number_of_peaks = 0)) %>%
-    mutate(no_peaks = sum(number_of_peaks) - number_of_peaks)
-}
-```
-
-Loop function through list of nests
-```{r}
-vigr_all_peak_counts <- map(vigr_3D_peak_region_per_nest, count_peaks) %>% 
-  bind_rows()
-```
-
-Now sum all values for cases and control and put in a contingency table and use fisher's exact test
-
-```{r}
-vigr_summary_counts <- vigr_all_peak_counts %>%
-  group_by(condition) %>%
-  summarise(total_peaks = sum(number_of_peaks),
-            total_no_peaks = sum(no_peaks))
-
-vigr_summary_counts %>% 
-  column_to_rownames("condition") %>% 
-  chisq.test() %>% 
-  broom::tidy()
-```
-
-Using a binary count instead, i.e., counting how many individual nests have this peak (in case and/or control)
-I am using a `moving_sum` threshold here of 1000 to exclude potential nests that only have a low enrichment in this area.
-This also matches the threshold used in `02_figure_02_alignments.Rmd`
-
-```{r}
-binary_peak_count <- function(df, moving_sum_threshold = 1000) {
-  df %>%
-    mutate(condition = ifelse(moving_sum > 0, "Case", "Control")) %>%
-    group_by(condition, nest) %>%
-    summarise(has_peak = ifelse(any(moving_sum > moving_sum_threshold & condition == "Case") | any(moving_sum < moving_sum_threshold & condition == "Control"), 1, 0), .groups = "drop") %>%
-    complete(condition = c("Case", "Control"), nest = unique(df$nest), fill = list(has_peak = 0)) %>% 
-    mutate(no_peak = 1 - has_peak) 
-}
-```
-
-
-```{r}
-vigr_all_binary_peak_counts <- map(vigr_3D_peak_region_per_nest, binary_peak_count) %>% 
-  bind_rows()
-
-vigr_binary_peak_counts_sum <- vigr_all_binary_peak_counts %>%
-  group_by(condition) %>%
-  summarise(total_peaks = sum(has_peak),
-            total_no_peaks = sum(no_peak))
-
-vigr_binary_peak_counts_sum %>% 
-  column_to_rownames("condition") %>% 
-  fisher.test() %>% 
-  broom::tidy()
-```
-
-### ENDIA
-
-There are some nests that do not have both conditions, so these cannot be included in case/control comparison per nest.
-E.g. Nest 3014 does not have cases.
-
-Filter to keep only nests that have Cases and Controls.
-```{r}
-endia_virscan_onset_complete_nests <- endia_virscan_onset %>% 
-  group_by(deidentified_nest_id_new) %>%
-  filter(all(c("Case", "Control") %in% condition)) %>%
+  group_by(sample_id) %>% 
+  mutate(rpk = abundance / sum(abundance) * 100000) %>% 
   ungroup()
 ```
 
-```{r, fig.width=14, fig.height=9}
-ENDIA_signal_per_nest_plots <- endia_virscan_onset_complete_nests %>%
-  group_by(deidentified_nest_id_new) %>%
-  mutate(age_years = round(age_at_sample_collection_days / 365), digits = 1) %>% 
-  group_map(~ .x %>%
-    calculate_rpk_fold_change(sample_id, condition, pep_id, abundance, ENDIA_blastp_evB1) %>%
-    calculate_moving_sum(value_column = fold_change, win_size = 32, step_size = 4) %>%
-    ms_plot_clean_3d_peak_annot() + 
-      ggtitle(paste("Nest", unique(.x$deidentified_nest_id_new), "- Age", unique(.x$age_years))) +
-      theme(
-        plot.title = element_text(size = 10)
-      ),
-    .keep = TRUE
+```bash
+makeblastdb -in raw_data/conserved_ev_motifs.fasta -dbtype prot -out raw_data/blast_databases/conserved_ev_motifs_db
+
+blastp -task blastp-short -query cache/endia_virscan_hits_peptides.fasta -db raw_data/blast_databases/conserved_ev_motifs_db -outfmt '6 qaccver saccver pident nident length evalue bitscore mismatch gapopen qstart qend sstart send qseq sseq ppos stitle frames' -evalue 0.01 -word_size 2 -out raw_data/blast_results/blastp_endia_ev_motifs.blast
+
+blastp -task blastp-short -query cache/vigr_virscan_hits_peptides.fasta -db raw_data/blast_databases/conserved_ev_motifs_db -outfmt '6 qaccver saccver pident nident length evalue bitscore mismatch gapopen qstart qend sstart send qseq sseq ppos stitle frames' -evalue 0.01 -word_size 2 -out raw_data/blast_results/blastp_vigr_ev_motifs.blast
+```
+
+```{r}
+endia_blastp_ev_motifs <- read_blast("raw_data/blast_results/blastp_endia_ev_motifs.blast")
+
+vigr_blastp_ev_motifs <- read_blast("raw_data/blast_results/blastp_vigr_ev_motifs.blast")
+```
+
+```{r}
+endia_motif_results <- endia_blastp_ev_motifs %>%
+    left_join(endia_virscan_onset, by = join_by(qaccver == pep_id)) 
+
+vigr_motif_results <- vigr_blastp_ev_motifs %>% 
+   left_join(vigr_virscan_metadata, by = join_by(qaccver == pep_id))
+```
+
+## ENDIA
+
+```{r}
+endia_motif_w_genera <- endia_motif_results %>%
+  group_by(saccver, condition, taxon_genus) %>% 
+  summarise(total_rpk = sum(rpk),
+            no_of_peptides = n_distinct(qaccver),
+            no_of_participants = n_distinct(participant_id),
+            no_of_samples = n_distinct(sample_id),
+            .groups = "drop") %>% 
+  filter(total_rpk > 0)
+```
+
+```{r, fig.height=8}
+endia_motif_w_genera %>%
+  filter(taxon_genus == "Enterovirus") %>% 
+  ggplot(aes(x = taxon_genus, y = total_rpk, fill = condition)) +
+  geom_col(position = position_dodge(width = 0.9)) +
+  scale_fill_manual(values = c("Case" = "#d73027", "Control" = "#4575b4"), labels = c("Case", "Control")) +
+  geom_text(aes(label = no_of_peptides), 
+            position = position_dodge(width = 0.9), 
+            vjust = -0.2, hjust = -0.7, size = 3) +
+  geom_text(aes(label = no_of_samples), 
+            position = position_dodge(width = 0.9), 
+            vjust = -2, hjust = -0.7, size = 3, color = "purple") +
+  facet_wrap(~ saccver) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "bottom",
+        line = element_blank(),
+      axis.text.x = element_blank(), 
+      strip.text = element_text(face = "bold")) +
+  labs(x = "Enterovirus peptides with significant hits", y = "Total normalised abundance", fill = "")
+```
+
+This essentially shows that the same peptides (black numbers) are present in all samples (purple number) between case and control
+
+```{r, echo = FALSE, fig.height=8}
+ggsave("figures/ev_hits_to_motifs.png", width = 8, height = 7)
+```
+
+Having a look at the BLAST results for the VP1 motif in ENDIA, stratified by sex:
+Female controls appear to have a stronger reaction compared to male controls. However, male cases have a stronger reaction compared to female cases. Black numbers are number of peptides and purple number are number of samples
+
+```{r, echo = FALSE}
+endia_motif_results %>%
+  group_by(saccver, condition, taxon_genus, infant_sex) %>% 
+  summarise(total_rpk = sum(rpk),
+            no_of_peptides = n_distinct(qaccver),
+            no_of_participants = n_distinct(participant_id),
+            no_of_samples = n_distinct(sample_id),
+            .groups = "drop") %>% 
+  filter(total_rpk > 0) %>% 
+  filter(taxon_genus == "Enterovirus") %>% 
+  filter(saccver == "VP1_motif") %>% 
+  ggplot(aes(x = taxon_genus, y = total_rpk, fill = condition)) +
+  geom_col(position = position_dodge(width = 0.9)) +
+  scale_fill_manual(values = c("Case" = "#d73027", "Control" = "#4575b4"), labels = c("Case", "Control")) +
+  geom_text(aes(label = no_of_peptides), 
+            position = position_dodge(width = 0.9), 
+            vjust = -0.2, hjust = -0.7, size = 3) +
+  geom_text(aes(label = no_of_samples), 
+            position = position_dodge(width = 0.9), 
+            vjust = -2, hjust = -0.7, size = 3, color = "purple") +
+  facet_wrap(~ infant_sex) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "bottom",
+        line = element_blank(),
+      axis.text.x = element_blank(), 
+      strip.text = element_text(face = "bold")) +
+  labs(x = "Enterovirus peptides with significant hits to VP1 motif", y = "Total normalised abundance", fill = "")
+```
+
+```{r}
+tidy_looksie <- function(glm_model) {
+    glm_model %>% 
+    broom.mixed::tidy(effect = "fixed", conf.int = TRUE, exponentiate = TRUE) %>% 
+    select(term, estimate, p.value, conf.low, conf.high) %>% 
+    mutate(significant = ifelse(p.value <= 0.10, T, F))}
+```
+
+### Stats ENDIA
+
+```{r}
+endia_motif_for_stats <- endia_motif_results %>% 
+  filter(taxon_genus == "Enterovirus") %>% 
+  group_by(saccver, sample_id) %>% 
+  mutate(total_rpk = sum(rpk)) %>% 
+  mutate(total_abundance = sum(abundance)) %>% 
+  ungroup() %>% 
+  select(saccver, sample_id, case, condition, taxon_genus, total_rpk, infant_id, mother_id, 
+         deidentified_nest_id_new, age_at_sample_collection_days, infant_sex,
+         infant_HLA, weightTEDDY, maternal_T1D, total_abundance, log_lib) %>% 
+  distinct(saccver, taxon_genus, sample_id, .keep_all = TRUE) %>% 
+  mutate(age_sample_collection_month = age_at_sample_collection_days / 365 * 12) %>% 
+  mutate(log_total_rpk = log(total_rpk + 1)) %>% 
+  mutate(across(c(infant_HLA, maternal_T1D, infant_id, mother_id, deidentified_nest_id_new, infant_sex), as.factor)) %>% 
+  mutate(age_c = scale(age_at_sample_collection_days)) %>% 
+  mutate(total_rpk_int = as.integer(total_rpk)) %>%  # also testing
+  mutate(Condition = factor(condition, levels = c("Control", "Case"), labels = c("Control", "Case"))) # for testing purposes
+```
+
+#### ENDIA 3D region 
+
+```{r}
+endia_3d_motif_for_stats <- endia_motif_for_stats %>% filter(saccver == "3D_motif")
+
+endia_3d_model <- glmmTMB(formula = case ~ log_total_rpk + infant_HLA + age_sample_collection_month + infant_sex + maternal_T1D + (1|deidentified_nest_id_new) + (1|mother_id),
+       family = poisson(link = "log"),
+        weights = weightTEDDY,
+       data = endia_3d_motif_for_stats)
+
+endia_3d_model %>% tidy_looksie()
+```
+
+##### 3D stratified by sex 
+
+No significance in abundances but HLA is significant in females 
+
+```{r}
+endia_3d_motif_for_stats_xy <- endia_3d_motif_for_stats %>% filter(infant_sex == "Male")
+endia_3d_motif_for_stats_xx <- endia_3d_motif_for_stats %>% filter(infant_sex == "Female")
+
+endia_3d_model_xy <- glmmTMB(formula = case ~ log_total_rpk + infant_HLA + age_sample_collection_month + maternal_T1D + (1|deidentified_nest_id_new) + (1|mother_id),
+       family = poisson(link = "log"),
+        weights = weightTEDDY,
+       data = endia_3d_motif_for_stats_xy)
+
+endia_3d_model_xx <- glmmTMB(formula = case ~ log_total_rpk + infant_HLA + age_sample_collection_month + maternal_T1D + (1|deidentified_nest_id_new) + (1|mother_id),
+       family = poisson(link = "log"),
+        weights = weightTEDDY,
+       data = endia_3d_motif_for_stats_xx)
+
+endia_3d_model_xx %>% tidy_looksie()
+
+endia_3d_model_xy %>% tidy_looksie()
+```
+
+3D doesn't seem to be a good predictor for IA. However, there is enrichment of 3D in cases 
+
+This enrichment appears in a statistical test too:
+
+```{r}
+endia_3d_abundance_as_outcome <- glmmTMB(formula = total_abundance ~ Condition + infant_HLA + age_sample_collection_month + infant_sex + maternal_T1D + offset(log_lib) + (1|deidentified_nest_id_new) + (1|mother_id),
+       family = poisson(link = "log"),
+        weights = weightTEDDY,
+       data = endia_3d_motif_for_stats) 
+
+endia_3d_abundance_as_outcome %>% tidy_looksie()
+```
+
+#### VP1 
+
+No significance in abundance but HLA is significant 
+
+```{r}
+endia_vp1_motif_for_stats <- endia_motif_for_stats %>% filter(saccver == "VP1_motif")
+
+endia_vp1_model <- glmmTMB(formula = case ~ log_total_rpk + infant_HLA + age_sample_collection_month + infant_sex + maternal_T1D + (1|deidentified_nest_id_new) + (1|mother_id),
+       family = poisson(link = "log"),
+        weights = weightTEDDY,
+       data = endia_vp1_motif_for_stats)
+
+endia_vp1_model %>% tidy_looksie()
+```
+##### VP1 stratified by sex ENDIA
+
+Stratifying by sex results in significant difference in abundance for males, but not for females. 
+However, HLA is significant in females, but not for males.
+
+Number of males and females per case or control group:
+```{r}
+endia_vp1_motif_for_stats %>% 
+  count(condition, infant_sex, name = "count") %>% 
+  arrange(infant_sex)
+```
+
+```{r}
+endia_vp1_motif_for_stats_xy <- endia_vp1_motif_for_stats %>% filter(infant_sex == "Male")
+endia_vp1_motif_for_stats_xx <- endia_vp1_motif_for_stats %>% filter(infant_sex == "Female")
+
+endia_vp1_xy_model <- glmmTMB(formula = case ~ log_total_rpk + infant_HLA + age_sample_collection_month + maternal_T1D +  (1|deidentified_nest_id_new) + (1|mother_id),
+       family = poisson(link = "log"),
+        weights = weightTEDDY,
+       data = endia_vp1_motif_for_stats_xy)
+
+endia_vp1_xx_model <- glmmTMB(formula = case ~ log_total_rpk + infant_HLA + age_sample_collection_month + maternal_T1D + (1|deidentified_nest_id_new) + (1|mother_id),
+       family = poisson(link = "log"),
+        weights = weightTEDDY,
+       data = endia_vp1_motif_for_stats_xx)
+
+summary(endia_vp1_xy_model)
+summary(endia_vp1_xx_model)
+```
+
+Pretty table with VP1 sex stratification results for ENDIA.
+Sample count for males and females per case and control group are shown in "Number of males and females per case or control group" ^
+
+```{r, echo = FALSE}
+endia_vp1_xx_model_tidy <- endia_vp1_xx_model %>% 
+  broom.mixed::tidy(effect = "fixed", conf.int = TRUE, exponentiate = TRUE) %>% 
+    add_column(sex = "Females")
+
+endia_vp1_xy_model_tidy <- endia_vp1_xy_model %>% 
+  broom.mixed::tidy(effect = "fixed", conf.int = TRUE, exponentiate = TRUE) %>% 
+    add_column(sex = "Males")
+
+endia_vp1_sex_s_models_tidy <- rbind(endia_vp1_xx_model_tidy, endia_vp1_xy_model_tidy) %>% 
+    dplyr::rename(RR = estimate,
+               `CI lower` = conf.low,
+               `CI upper` = conf.high) %>% 
+    select(term, RR, `CI lower`, `CI upper`, p.value, sex) %>% 
+    filter(term != "(Intercept)")
+
+endia_vp1_sex_s_models_tidy_table <- endia_vp1_sex_s_models_tidy %>%
+  mutate(term = case_match(term, !!!c("log_total_rpk" ~ "log(EV)"), .default = term)) %>% 
+  select(-sex) %>% 
+  gt(rowname_col = "term") %>%
+  tab_header(
+    title = "Summary of GLM model tests"
+  ) %>%
+  cols_label(
+    term = "Predictor",
+    RR = "RR",
+    `CI lower` = "CI Lower",
+    `CI upper` = "CI Upper",
+    p.value = "Pr(>|z|)"
+  ) %>%
+  fmt_number(
+    columns = c(RR, `CI lower`, `CI upper`, p.value),
+    decimals = 3
+  ) %>%
+  cols_align(
+    align = "left",
+    columns = everything()
+  ) %>% 
+  tab_row_group(
+    label = "ENDIA females",
+    rows = 1:6
+  ) %>% 
+  tab_row_group(
+    label = "ENDIA males",
+    rows = 7:12
+  ) %>% 
+  tab_style(
+    style = cell_fill(color = "lightgrey"),
+    locations = cells_row_groups(groups = c("ENDIA males", "ENDIA females"))
   )
 
-wrap_plots(ENDIA_signal_per_nest_plots, ncol = 6)
+as_raw_html(endia_vp1_sex_s_models_tidy_table)
+
 ```
 
-```{r}
-endia_test <- endia_virscan_onset_complete_nests %>% 
-    group_by(deidentified_nest_id_new) %>%
-    group_map(~ .x %>%
-    calculate_rpk_fold_change(sample_id, condition, pep_id, abundance, ENDIA_blastp_evB1) %>%
-    calculate_moving_sum(value_column = fold_change, win_size = 32, step_size = 4) %>% 
-      add_column(nest = unique(.x$deidentified_nest_id_new)) %>% 
-      filter(window_start >= 1735 & window_start <= 1754) %>% 
-      distinct(window_start, .keep_all = TRUE), 
-    .keep = TRUE)
- 
-endia_test <- endia_test %>% discard(~ nrow(.x) == 0) #remove 3 dfs with 0 rows. TODO: CHECK WHY THIS IS HAPPENING
-  
- 
-endia_all_binary_peak_counts <- map(endia_test, binary_peak_count) %>% 
-  bind_rows()
-
-endia_binary_peak_counts_sum <- endia_all_binary_peak_counts %>%
-  group_by(condition) %>%
-  summarise(total_peaks = sum(has_peak),
-            total_no_peaks = sum(no_peak))
-
-endia_binary_peak_counts_sum
-
-endia_binary_peak_counts_sum %>% 
-  column_to_rownames("condition") %>% 
-  fisher.test() %>% 
-  broom::tidy()
+```{r, echo = FALSE}
+gtsave(endia_vp1_sex_s_models_tidy_table, "figures/endia_vp1_sex_s_models_tidy_table.png")
 ```
 
+No significance for sex in an interaction model (log_total_rpk * infant_sex)
 ```{r}
-endia_all_peak_counts <- map(endia_test, count_peaks) %>% 
-  bind_rows()
+endia_vp1_model_sex_inter <- glmmTMB(formula = case ~ log_total_rpk * infant_sex + infant_HLA + age_sample_collection_month + maternal_T1D + (1|deidentified_nest_id_new) + (1|mother_id),
+       family = poisson(link = "log"),
+        weights = weightTEDDY,
+       data = endia_vp1_motif_for_stats)
 
-endia_all_peak_counts_sum <- endia_all_peak_counts %>%
-  group_by(condition) %>%
-  summarise(total_peaks = sum(number_of_peaks),
-            total_no_peaks = sum(no_peaks))
-
-endia_all_peak_counts_sum %>% 
-  column_to_rownames("condition") %>% 
-  fisher.test() %>% 
-  broom::tidy()
+endia_vp1_model_sex_inter %>% tidy_looksie()
 ```
 
-
-## Snippets 
-
-VIGR nest 19 has both cases and control values in this region!
+## VIGR
 
 ```{r}
-nest19 <- vigr_3D_peak_region_per_nest[[19]]
+vigr_motif_w_genera <- vigr_motif_results %>%
+  group_by(saccver, Condition, taxon_genus) %>% 
+  summarise(total_rpk = sum(rpk),
+            no_of_peptides = n_distinct(qaccver),
+            no_of_participants = n_distinct(participant_id),
+            no_of_samples = n_distinct(sample_id),
+            .groups = "drop") %>% 
+  filter(total_rpk > 0)
+```
 
-VIGR_signal_per_nest_plots[[19]] + ylim(-400, 400)
+Examining BLAST results shows that in VIGR, the same peptides (black numbers) are present in all participants (purple number) between case and control
 
-nest19 %>% count_peaks()
+```{r, fig.height=8}
+vigr_motif_w_genera %>%
+  filter(taxon_genus == "Enterovirus") %>% 
+  ggplot(aes(x = taxon_genus, y = total_rpk, fill = Condition)) +
+  geom_col(position = position_dodge(width = 0.9)) +
+  scale_fill_manual(values = c("Case" = "#d73027", "Control" = "#4575b4"), labels = c("Case", "Control")) +
+  geom_text(aes(label = no_of_peptides), 
+            position = position_dodge(width = 0.9), 
+            vjust = -0.2, hjust = -0.7, size = 3) +
+  geom_text(aes(label = no_of_samples), 
+            position = position_dodge(width = 0.9), 
+            vjust = -2, hjust = -0.7, size = 3, color = "purple") +
+  facet_wrap(~ saccver) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "bottom",
+        line = element_blank(),
+      axis.text.x = element_blank(), 
+      strip.text = element_text(face = "bold")) +
+  labs(x = "Enterovirus peptides with significant hits", y = "Total normalised abundance", fill = "")
+```
 
-nest19 %>% binary_peak_count(moving_sum_threshold = 300) # cases only have a peak < 300 moving_sum
+### Stats VIGR 
 
-nest19_count <- nest19 %>% count_peaks()
+No significance for VIGR in any fixed effects for any models. However, the total sample size for VIGR is small (42). Furthemore, after stratifying by sex, only ~10 males or females remain in both case and control conditions, which therefore limits the statistical power. 
 
-nest19 %>% 
-  select(moving_sum, nest) %>% 
-  mutate(condition = ifelse(moving_sum > 0, "Case", "Control")) %>%
-  count(condition, name = "peaks") %>%
-  mutate(no_peaks = sum(peaks) - peaks) %>% 
-  column_to_rownames("condition") %>% 
-  as.matrix() %>%
-  fisher.test()
+```{r}
+vigr_motif_for_stats <- vigr_motif_results %>% 
+  mutate(Nest = str_extract(sample_id, "\\d+")) %>% 
+  filter(taxon_genus == "Enterovirus") %>% 
+  group_by(saccver, sample_id) %>% #removed condition
+  mutate(total_rpk = sum(rpk)) %>% 
+  ungroup() %>% 
+  select(saccver, Condition, total_rpk, sample_id, taxon_genus, 
+         Nest, Age, Sex, HLA_Status, My_name) %>% 
+ distinct(saccver, taxon_genus, sample_id, .keep_all = TRUE) %>% 
+ mutate(case = ifelse(Condition == "Case", 1, 0),
+        log_total_rpk = log(total_rpk + 1),
+        across(c(HLA_Status, Sex, Nest, My_name), as.factor))
+```
+
+Number of males and females per case or control group:
+```{r}
+vigr_motif_for_stats %>% 
+  distinct(sample_id, .keep_all = TRUE) %>% 
+  count(Condition, Sex, name = "count")
+```
+
+#### VIGR 3D region
+
+```{r}
+vigr_3d_motif_for_stats <- vigr_motif_for_stats %>% filter(saccver == "3D_motif")
+
+vigr_3d_model <- glmmTMB(formula = case ~ log_total_rpk + HLA_Status + Age + Sex + (1|Nest) + (1|My_name),
+       family = poisson(link = "log"),
+       data = vigr_3d_motif_for_stats)
+
+vigr_3d_model %>% tidy_looksie()
+
+```
+
+#### VIGR VP1 region
+
+```{r}
+vigr_vp1_motif_for_stats <- vigr_motif_for_stats %>% filter(saccver == "VP1_motif")
+
+vigr_vp1_model <- glmmTMB(formula = case ~ log_total_rpk + HLA_Status + Age + Sex + (1|Nest) + (1|My_name),
+       family = poisson(link = "log"),
+       data = vigr_vp1_motif_for_stats)
+
+vigr_vp1_model %>% tidy_looksie()
+```
+
+#### VIGR VP1 Sex stratified 
+
+Females VP1 motif
+```{r}
+vigr_vp1_motif_for_stats_xx <- vigr_vp1_motif_for_stats %>% filter(Sex == "F")
+
+vigr_vp1_xx_model <- glmmTMB(formula = case ~ log_total_rpk + HLA_Status + Age + (1|Nest) + (1|My_name),
+       family = poisson(link = "log"),
+       data = vigr_vp1_motif_for_stats_xx)
+
+vigr_vp1_xx_model %>% tidy_looksie()
+```
+
+Males VP1 motif
+
+```{r}
+vigr_vp1_motif_for_stats_xy <- vigr_vp1_motif_for_stats %>% filter(Sex == "M")
+
+vigr_vp1_xy_model <- glmmTMB(formula = case ~ log_total_rpk + HLA_Status + Age + (1|Nest) + (1|My_name),
+       family = poisson(link = "log"),
+       data = vigr_vp1_motif_for_stats_xy)
+
+vigr_vp1_xy_model %>% tidy_looksie()
 ```
 

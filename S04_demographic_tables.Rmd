@@ -6,27 +6,26 @@ output: github_document
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, options(readr.show_col_types = FALSE))
 ```
 
-## Demographic tables
-
-**VIGR** 
+## Demographic and genetic characteristic tables
 
 ```{r}
 library(tidyverse)
 library(gt)
 ```
 
+**VIGR** 
+
 Read in data and remove cases and associated controls before seroconversion 
 ```{r}
 vigr_metadata <- read.csv("raw_data/metadata/vigr_sample_info.csv")[-1] %>% 
    mutate(Replicate = paste0("t", Replicate)) %>% 
-  filter(Replicate != "t1") #remove cases and ass. controls before seroconversion
+   filter(Replicate != "t1") #remove cases and ass. controls before seroconversion
 
 vigr_more_metadata <- readxl::read_xlsx("raw_data/metadata/VIGR_HLA.xlsx") %>%
-  mutate(Sample = paste0("UNSW_", UNSW)) %>% 
-  select(-c(HLA_category, Notes, HLA_Status)) %>% 
-  mutate(Diabetes = if_else(Diabetes %in% c("Brother", "Sister"), "Sibling", Diabetes)) 
+  select(Participant_Id, UNSW, Diabetes, Risk_group, `Age (years)`) %>% 
+  mutate(maternal_T1D = if_else(Diabetes == "Mother", "T1D", "no T1D"))
 
-vigr_all_metadata <- vigr_metadata %>% left_join(vigr_more_metadata, by = join_by(Sample, Participant_Id, UNSW))
+vigr_all_metadata <- vigr_metadata %>% left_join(vigr_more_metadata, join_by(Participant_Id, UNSW))
 ```
 
 Helper function to summarise categorical variables
@@ -45,6 +44,7 @@ summarise_cat <- function(data, var) {
 ```
 
 Summarise characteristics and create table dataframe 
+
 ```{r}
 sex_summary <- summarise_cat(vigr_all_metadata, Sex) %>% 
     mutate(Characteristic = case_match(Characteristic, !!!c("F" ~ "Female", "M" ~ "Male")))
@@ -56,17 +56,20 @@ age_summary <- vigr_all_metadata %>%
   group_by(Condition) %>%
   summarise(label = sprintf("%.1f (%.1f)", mean(`Age (years)`), sd(`Age (years)`))) %>%
   pivot_wider(names_from = Condition, values_from = label) %>%
-  mutate(Characteristic = "Mean age at sampling (SD)") %>%
+  mutate(Characteristic = "Mean age in years at sampling (SD)") %>%
   select(Characteristic, Case, Control)
 
+mat_t1d_summary <- summarise_cat(vigr_all_metadata, maternal_T1D)
+
 section_headers <- tibble(
-  Characteristic = c("Sex", "HLA Status", "Relative with type 1 diabetes"),
+  Characteristic = c("Sex", "HLA Status", "Maternal T1D Status"),
   Case = "", Control = "")
 
 vigr_table_data <- bind_rows(
   age_summary,
   section_headers[1,], sex_summary,
   section_headers[2,], hla_summary,
+  section_headers[3,], mat_t1d_summary,
 )
 ```
 
@@ -74,7 +77,7 @@ vigr_table_data <- bind_rows(
 ```{r}
 vigr_demographic_table <- vigr_table_data %>%
   gt() %>%
-  tab_header(title = "Demographic Summary of VIGR Participants") %>%
+  tab_header(title = "Demographic and genetic characteristics of VIGR samples") %>%
   cols_label(
     Case = html("Case (n = 21)"),
     Control = html("Control (n = 21)")
@@ -91,7 +94,85 @@ vigr_demographic_table <- vigr_table_data %>%
 as_raw_html(vigr_demographic_table)
 ```
 
-
 ```{r, echo = FALSE}
 gtsave(vigr_demographic_table, "figures/vigr_demographic_table.png")
 ```
+
+**ENDIA** 
+
+```{r}
+endia_virscan_onset <- read_rds("cache/endia_virscan_metadata.rds") %>% 
+  filter(onset_visit == 1)
+
+endia_metadata_onset_trimmed <- endia_virscan_onset %>% 
+  distinct(sample_id, .keep_all = TRUE) %>% 
+  rename(Condition = condition) %>% 
+  mutate(age_sample_collection_month = age_at_sample_collection_days / 365 * 12) %>% 
+  select(sample_id, participant_id, Condition, infant_HLA, age_sample_collection_month, infant_sex, maternal_T1D) %>% 
+  mutate(infant_HLA = case_match(infant_HLA, !!!NA ~ "Unknown", .default = infant_HLA),
+         maternal_T1D = case_match(maternal_T1D, !!!c(1 ~ "T1D", 0 ~ "No T1D")))
+
+endia_sex_summary <- summarise_cat(endia_metadata_onset_trimmed, infant_sex)
+
+endia_hla_summary <- summarise_cat(endia_metadata_onset_trimmed, infant_HLA) %>% 
+   mutate(Case = ifelse(is.na(Case), "0 (0%)", Case))
+
+endia_mat_t1d_summary <- summarise_cat(endia_metadata_onset_trimmed, maternal_T1D)
+
+endia_age_summary_months <- endia_metadata_onset_trimmed %>% 
+  group_by(Condition) %>%
+  summarise(label = sprintf("%.1f (%.1f)", mean(age_sample_collection_month), sd(age_sample_collection_month))) %>%
+  pivot_wider(names_from = Condition, values_from = label) %>%
+  mutate(Characteristic = "Mean age in months at sampling (SD)") %>%
+  select(Characteristic, Case, Control)
+
+endia_section_headers <- tibble(
+  Characteristic = c("Sex", "HLA type", "Maternal T1D Status"),
+  Case = "", Control = "")
+
+endia_table_data <- bind_rows(
+  endia_age_summary_months,
+  endia_section_headers[1,], endia_sex_summary,
+  endia_section_headers[2,], endia_hla_summary,
+  endia_section_headers[3,], endia_mat_t1d_summary,
+)
+```
+
+
+```{r, eval=FALSE, echo=FALSE}
+endia_age_summary_years <- endia_virscan_onset %>% 
+  distinct(sample_id, .keep_all = TRUE) %>% 
+  rename(Condition = condition) %>% 
+  mutate(age_sample_collection_years = age_at_sample_collection_days / 365) %>% 
+  group_by(Condition) %>%
+  summarise(label = sprintf("%.1f (%.1f)", mean(age_sample_collection_years), sd(age_sample_collection_years))) %>%
+  pivot_wider(names_from = Condition, values_from = label) %>%
+  mutate(Characteristic = "Mean age at sampling (SD)") %>%
+  select(Characteristic, Case, Control)
+```
+
+```{r, echo = FALSE}
+endia_demographic_table <- endia_table_data %>%
+  gt() %>%
+  tab_header(title = "Demographic and genetic characteristics of ENDIA samples") %>%
+  cols_label(
+    Case = html("Case (n = 44)"),
+    Control = html("Control (n = 97)")
+  ) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_body(
+      columns = 1,
+      rows = endia_table_data$Characteristic %in% endia_section_headers$Characteristic
+    )
+  ) %>%
+  cols_label(Characteristic = "") 
+
+as_raw_html(endia_demographic_table)
+```
+
+
+```{r, echo = FALSE}
+gtsave(endia_demographic_table, "figures/endia_demographic_table.png")
+```
+

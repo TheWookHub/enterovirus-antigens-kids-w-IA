@@ -15,20 +15,28 @@ library(glmmTMB)
 library(gt)
 ```
 
-Use data prepared in `01_figure_01_CXVB_antigen_mapping.Rmd`
+Use data prepared in `01_figure_01_CXVB_antigen_mapping.Rmd` and add extra metadata for VIGR so we can include maternal T1D status in the models
 
 ```{r}
 endia_virscan_onset <- read_rds("cache/endia_virscan_metadata.rds") %>%
   filter(onset_visit == 1) %>% 
   group_by(sample_id) %>% 
-  mutate(rpk = abundance / sum(abundance) * 100000) %>% 
-  mutate(log_lib = log(sum(abundance) + 1e-8)) %>% # add offset for testing 
+  mutate(rpk = abundance / sum(abundance) * 100000,
+         log_lib = log(sum(abundance) + 1e-8)) %>%  # add offset for testing 
   ungroup()
 
 vigr_virscan_metadata <- read_rds("cache/vigr_virscan_metadata.rds") %>% 
   group_by(sample_id) %>% 
-  mutate(rpk = abundance / sum(abundance) * 100000) %>% 
+  mutate(rpk = abundance / sum(abundance) * 100000,
+         log_lib = log(sum(abundance) + 1e-8)) %>% 
   ungroup()
+
+vigr_extra_metadata <- readxl::read_xlsx("raw_data/metadata/VIGR_HLA.xlsx") %>% 
+  select(Participant_Id, UNSW, Diabetes, Risk_group) %>% 
+  mutate(maternal_T1D = if_else(Diabetes == "Mother", "1", "0"))
+
+vigr_virscan_metadata_w_maternal_T1D <- vigr_virscan_metadata %>% 
+  left_join(vigr_extra_metadata, join_by(sample_id == Participant_Id, UNSW))
 ```
 
 ```bash
@@ -50,7 +58,7 @@ endia_motif_results <- endia_blastp_ev_motifs %>%
     left_join(endia_virscan_onset, by = join_by(qaccver == pep_id)) 
 
 vigr_motif_results <- vigr_blastp_ev_motifs %>% 
-   left_join(vigr_virscan_metadata, by = join_by(qaccver == pep_id))
+   left_join(vigr_virscan_metadata_w_maternal_T1D, by = join_by(qaccver == pep_id))
 ```
 
 ## ENDIA
@@ -139,8 +147,8 @@ tidy_looksie <- function(glm_model) {
 endia_motif_for_stats <- endia_motif_results %>% 
   filter(taxon_genus == "Enterovirus") %>% 
   group_by(saccver, sample_id) %>% 
-  mutate(total_rpk = sum(rpk)) %>% 
-  mutate(total_abundance = sum(abundance)) %>% 
+  mutate(total_rpk = sum(rpk),
+         total_abundance = sum(abundance)) %>% 
   ungroup() %>% 
   select(saccver, sample_id, case, condition, taxon_genus, total_rpk, infant_id, mother_id, 
          deidentified_nest_id_new, age_at_sample_collection_days, infant_sex,
@@ -149,9 +157,7 @@ endia_motif_for_stats <- endia_motif_results %>%
   mutate(age_sample_collection_month = age_at_sample_collection_days / 365 * 12) %>% 
   mutate(log_total_rpk = log(total_rpk + 1)) %>% 
   mutate(across(c(infant_HLA, maternal_T1D, infant_id, mother_id, deidentified_nest_id_new, infant_sex), as.factor)) %>% 
-  mutate(age_c = scale(age_at_sample_collection_days)) %>% 
-  mutate(total_rpk_int = as.integer(total_rpk)) %>%  # also testing
-  mutate(Condition = factor(condition, levels = c("Control", "Case"), labels = c("Control", "Case"))) # for testing purposes
+  mutate(Condition = factor(condition, levels = c("Control", "Case"), labels = c("Control", "Case")))
 ```
 
 #### ENDIA 3D region 
@@ -217,6 +223,7 @@ endia_vp1_model <- glmmTMB(formula = case ~ log_total_rpk + infant_HLA + age_sam
 
 endia_vp1_model %>% tidy_looksie()
 ```
+
 ##### VP1 stratified by sex ENDIA
 
 Stratifying by sex results in significant difference in abundance for males, but not for females. 
@@ -245,68 +252,6 @@ endia_vp1_xx_model <- glmmTMB(formula = case ~ log_total_rpk + infant_HLA + age_
 
 summary(endia_vp1_xy_model)
 summary(endia_vp1_xx_model)
-```
-
-Pretty table with VP1 sex stratification results for ENDIA.
-Sample count for males and females per case and control group are shown in "Number of males and females per case or control group" ^
-
-```{r, echo = FALSE}
-endia_vp1_xx_model_tidy <- endia_vp1_xx_model %>% 
-  broom.mixed::tidy(effect = "fixed", conf.int = TRUE, exponentiate = TRUE) %>% 
-    add_column(sex = "Females")
-
-endia_vp1_xy_model_tidy <- endia_vp1_xy_model %>% 
-  broom.mixed::tidy(effect = "fixed", conf.int = TRUE, exponentiate = TRUE) %>% 
-    add_column(sex = "Males")
-
-endia_vp1_sex_s_models_tidy <- rbind(endia_vp1_xx_model_tidy, endia_vp1_xy_model_tidy) %>% 
-    dplyr::rename(RR = estimate,
-               `CI lower` = conf.low,
-               `CI upper` = conf.high) %>% 
-    select(term, RR, `CI lower`, `CI upper`, p.value, sex) %>% 
-    filter(term != "(Intercept)")
-
-endia_vp1_sex_s_models_tidy_table <- endia_vp1_sex_s_models_tidy %>%
-  mutate(term = case_match(term, !!!c("log_total_rpk" ~ "log(EV)"), .default = term)) %>% 
-  select(-sex) %>% 
-  gt(rowname_col = "term") %>%
-  tab_header(
-    title = "Summary of GLM model tests"
-  ) %>%
-  cols_label(
-    term = "Predictor",
-    RR = "RR",
-    `CI lower` = "CI Lower",
-    `CI upper` = "CI Upper",
-    p.value = "Pr(>|z|)"
-  ) %>%
-  fmt_number(
-    columns = c(RR, `CI lower`, `CI upper`, p.value),
-    decimals = 3
-  ) %>%
-  cols_align(
-    align = "left",
-    columns = everything()
-  ) %>% 
-  tab_row_group(
-    label = "ENDIA females",
-    rows = 1:6
-  ) %>% 
-  tab_row_group(
-    label = "ENDIA males",
-    rows = 7:12
-  ) %>% 
-  tab_style(
-    style = cell_fill(color = "lightgrey"),
-    locations = cells_row_groups(groups = c("ENDIA males", "ENDIA females"))
-  )
-
-as_raw_html(endia_vp1_sex_s_models_tidy_table)
-
-```
-
-```{r, echo = FALSE}
-gtsave(endia_vp1_sex_s_models_tidy_table, "figures/endia_vp1_sex_s_models_tidy_table.png")
 ```
 
 No significance for sex in an interaction model (log_total_rpk * infant_sex)
@@ -363,15 +308,17 @@ No significance for VIGR in any fixed effects for any models. However, the total
 vigr_motif_for_stats <- vigr_motif_results %>% 
   mutate(Nest = str_extract(sample_id, "\\d+")) %>% 
   filter(taxon_genus == "Enterovirus") %>% 
-  group_by(saccver, sample_id) %>% #removed condition
-  mutate(total_rpk = sum(rpk)) %>% 
+  group_by(saccver, sample_id) %>%
+  mutate(total_rpk = sum(rpk),
+         total_abundance = sum(abundance)) %>% 
   ungroup() %>% 
   select(saccver, Condition, total_rpk, sample_id, taxon_genus, 
-         Nest, Age, Sex, HLA_Status, My_name) %>% 
+         Nest, Age, Sex, HLA_Status, My_name, total_abundance, log_lib, maternal_T1D) %>% 
  distinct(saccver, taxon_genus, sample_id, .keep_all = TRUE) %>% 
  mutate(case = ifelse(Condition == "Case", 1, 0),
         log_total_rpk = log(total_rpk + 1),
-        across(c(HLA_Status, Sex, Nest, My_name), as.factor))
+        across(c(HLA_Status, Sex, Nest, My_name, maternal_T1D), as.factor)) %>% 
+ mutate(Condition = factor(Condition, levels = c("Control", "Case"), labels = c("Control", "Case")))
 ```
 
 Number of males and females per case or control group:
@@ -386,12 +333,20 @@ vigr_motif_for_stats %>%
 ```{r}
 vigr_3d_motif_for_stats <- vigr_motif_for_stats %>% filter(saccver == "3D_motif")
 
-vigr_3d_model <- glmmTMB(formula = case ~ log_total_rpk + HLA_Status + Age + Sex + (1|Nest) + (1|My_name),
+vigr_3d_model <- glmmTMB(formula = case ~ log_total_rpk + HLA_Status + Age + Sex + maternal_T1D + (1|Nest) + (1|My_name),
        family = poisson(link = "log"),
        data = vigr_3d_motif_for_stats)
 
 vigr_3d_model %>% tidy_looksie()
+```
 
+```{r}
+vigr_3d_abundance_as_outcome <- glmmTMB(formula = total_abundance ~ Condition + HLA_Status + Age + Sex + maternal_T1D + offset(log_lib) + (1|Nest) + (1|My_name),
+       family = poisson(link = "log"),
+       data = vigr_3d_motif_for_stats)  
+
+
+vigr_3d_abundance_as_outcome %>% tidy_looksie()
 ```
 
 #### VIGR VP1 region
@@ -399,7 +354,7 @@ vigr_3d_model %>% tidy_looksie()
 ```{r}
 vigr_vp1_motif_for_stats <- vigr_motif_for_stats %>% filter(saccver == "VP1_motif")
 
-vigr_vp1_model <- glmmTMB(formula = case ~ log_total_rpk + HLA_Status + Age + Sex + (1|Nest) + (1|My_name),
+vigr_vp1_model <- glmmTMB(formula = case ~ log_total_rpk + HLA_Status + Age + Sex + maternal_T1D + (1|Nest) + (1|My_name),
        family = poisson(link = "log"),
        data = vigr_vp1_motif_for_stats)
 
@@ -412,7 +367,7 @@ Females VP1 motif
 ```{r}
 vigr_vp1_motif_for_stats_xx <- vigr_vp1_motif_for_stats %>% filter(Sex == "F")
 
-vigr_vp1_xx_model <- glmmTMB(formula = case ~ log_total_rpk + HLA_Status + Age + (1|Nest) + (1|My_name),
+vigr_vp1_xx_model <- glmmTMB(formula = case ~ log_total_rpk + HLA_Status + Age + maternal_T1D + (1|Nest) + (1|My_name),
        family = poisson(link = "log"),
        data = vigr_vp1_motif_for_stats_xx)
 
@@ -424,10 +379,255 @@ Males VP1 motif
 ```{r}
 vigr_vp1_motif_for_stats_xy <- vigr_vp1_motif_for_stats %>% filter(Sex == "M")
 
-vigr_vp1_xy_model <- glmmTMB(formula = case ~ log_total_rpk + HLA_Status + Age + (1|Nest) + (1|My_name),
+vigr_vp1_xy_model <- glmmTMB(formula = case ~ log_total_rpk + HLA_Status + Age + maternal_T1D + (1|Nest) + (1|My_name),
        family = poisson(link = "log"),
        data = vigr_vp1_motif_for_stats_xy)
 
 vigr_vp1_xy_model %>% tidy_looksie()
 ```
 
+### Generating pretty tables with the `gt` package from the GLM model results
+
+#### VP1 Sex stratified 
+
+**ENDIA**
+
+```{r, echo = FALSE}
+endia_vp1_xx_model_tidy <- endia_vp1_xx_model %>% 
+  broom.mixed::tidy(effect = "fixed", conf.int = TRUE, exponentiate = TRUE) %>% 
+    add_column(sex = "Females")
+
+endia_vp1_xy_model_tidy <- endia_vp1_xy_model %>% 
+  broom.mixed::tidy(effect = "fixed", conf.int = TRUE, exponentiate = TRUE) %>% 
+    add_column(sex = "Males")
+
+endia_vp1_sex_s_models_tidy <- rbind(endia_vp1_xx_model_tidy, endia_vp1_xy_model_tidy) %>% 
+    dplyr::rename(RR = estimate,
+               `CI lower` = conf.low,
+               `CI upper` = conf.high) %>% 
+    select(term, RR, `CI lower`, `CI upper`, p.value, sex) %>% 
+    filter(term != "(Intercept)")
+
+endia_vp1_sex_s_models_tidy_table <- endia_vp1_sex_s_models_tidy %>%
+  mutate(term = case_match(term, !!!c("log_total_rpk" ~ "log(EV)"), .default = term)) %>% 
+  select(-sex) %>% 
+  gt(rowname_col = "term") %>%
+  tab_header(
+    title = "Summary of GLM models for the VP1 motif in ENDIA"
+  ) %>%
+  cols_label(
+    term = "Predictor",
+    RR = "RR",
+    `CI lower` = "CI Lower",
+    `CI upper` = "CI Upper",
+    p.value = "Pr(>|z|)"
+  ) %>%
+  fmt_number(
+    columns = c(RR, `CI lower`, `CI upper`, p.value),
+    decimals = 3
+  ) %>%
+  cols_align(
+    align = "left",
+    columns = everything()
+  ) %>% 
+  tab_row_group(
+    label = "ENDIA females (Case n = 22, Control n = 49)",
+    rows = 1:6
+  ) %>% 
+  tab_row_group(
+    label = "ENDIA males (Case n = 22, Control n = 48)",
+    rows = 7:12
+  ) %>% 
+  tab_style(
+    style = cell_fill(color = "lightgrey"),
+    locations = cells_row_groups(groups = c("ENDIA males (Case n = 22, Control n = 48)", "ENDIA females (Case n = 22, Control n = 49)"))
+  )
+
+as_raw_html(endia_vp1_sex_s_models_tidy_table)
+```
+
+```{r, echo = FALSE}
+gtsave(endia_vp1_sex_s_models_tidy_table, "figures/endia_vp1_sex_s_models_tidy_table.png")
+```
+
+**VIGR** 
+
+```{r, echo = FALSE}
+vigr_vp1_xx_model_tidy <- vigr_vp1_xx_model %>% 
+  broom.mixed::tidy(effect = "fixed", conf.int = TRUE, exponentiate = TRUE) %>% 
+    add_column(sex = "Females")
+
+vigr_vp1_xy_model_tidy <- vigr_vp1_xy_model %>% 
+  broom.mixed::tidy(effect = "fixed", conf.int = TRUE, exponentiate = TRUE) %>% 
+    add_column(sex = "Males")
+
+vigr_vp1_sex_s_models_tidy <- rbind(vigr_vp1_xx_model_tidy, vigr_vp1_xy_model_tidy) %>% 
+    dplyr::rename(RR = estimate,
+               `CI lower` = conf.low,
+               `CI upper` = conf.high) %>% 
+    select(term, RR, `CI lower`, `CI upper`, p.value, sex) %>% 
+    filter(term != "(Intercept)")
+
+vigr_vp1_sex_s_models_tidy_table <- vigr_vp1_sex_s_models_tidy %>%
+  mutate(term = case_match(term, !!!c("log_total_rpk" ~ "log(EV)"), .default = term)) %>% 
+  select(-sex) %>% 
+  gt(rowname_col = "term") %>%
+  tab_header(
+    title = "Summary of GLM models for the VP1 motif in VIGR"
+  ) %>%
+  cols_label(
+    term = "Predictor",
+    RR = "RR",
+    `CI lower` = "CI Lower",
+    `CI upper` = "CI Upper",
+    p.value = "Pr(>|z|)"
+  ) %>%
+  fmt_number(
+    columns = c(RR, `CI lower`, `CI upper`, p.value),
+    decimals = 3
+  ) %>%
+  cols_align(
+    align = "left",
+    columns = everything()
+  ) %>% 
+  tab_row_group(
+    label = "VIGR females (Case n = 10, Control n = 10)",
+    rows = 1:4
+  ) %>% 
+  tab_row_group(
+    label = "VIGR males (Case n = 11, Control n = 11)",
+    rows = 5:9
+  ) %>% 
+  tab_style(
+    style = cell_fill(color = "lightgrey"),
+    locations = cells_row_groups(groups = c("VIGR males (Case n = 11, Control n = 11)", "VIGR females (Case n = 10, Control n = 10)"))
+  )
+
+as_raw_html(vigr_vp1_sex_s_models_tidy_table)
+```
+
+```{r, echo = FALSE}
+gtsave(vigr_vp1_sex_s_models_tidy_table, "figures/vigr_vp1_sex_s_models_tidy_table.png")
+```
+
+#### 3D models, including both `case ~ log(EV_normalised_antibody_levels)` and `EV_antibody_levels ~ case`
+
+**ENDIA**
+
+```{r, echo = FALSE}
+endia_3d_model_tidy <- endia_3d_model %>% 
+  broom.mixed::tidy(effect = "fixed", conf.int = TRUE, exponentiate = TRUE) %>% 
+    add_column(outcome = "case")
+
+endia_3d_abundance_as_outcome_model_tidy <- endia_3d_abundance_as_outcome %>% 
+  broom.mixed::tidy(effect = "fixed", conf.int = TRUE, exponentiate = TRUE) %>% 
+    add_column(outcome = "abundance")
+
+endia_3d_model_tidy_models_tidy <- rbind(endia_3d_model_tidy, endia_3d_abundance_as_outcome_model_tidy) %>% 
+    dplyr::rename(RR = estimate,
+               `CI lower` = conf.low,
+               `CI upper` = conf.high) %>% 
+    select(term, RR, `CI lower`, `CI upper`, p.value, outcome) %>% 
+    filter(term != "(Intercept)")
+
+endia_3d_model_tidy_models_tidy_table <- endia_3d_model_tidy_models_tidy %>%
+  mutate(term = case_match(term, !!!c("log_total_rpk" ~ "log(EV)"), .default = term)) %>% 
+  select(-outcome) %>% 
+  gt(rowname_col = "term") %>%
+  tab_header(
+    title = "Summary of GLM models for the 3D motif in ENDIA"
+  ) %>%
+  cols_label(
+    term = "Predictor",
+    RR = "RR",
+    `CI lower` = "CI Lower",
+    `CI upper` = "CI Upper",
+    p.value = "Pr(>|z|)"
+  ) %>%
+  fmt_number(
+    columns = c(RR, `CI lower`, `CI upper`, p.value),
+    decimals = 3
+  ) %>%
+  cols_align(
+    align = "left",
+    columns = everything()
+  ) %>% 
+  tab_row_group(
+    label = "ENDIA case as outcome variable",
+    rows = 1:7
+  ) %>% 
+  tab_row_group(
+    label = "ENDIA EV antibody response as outcome variable",
+    rows = 8:14
+  ) %>% 
+  tab_style(
+    style = cell_fill(color = "lightgrey"),
+    locations = cells_row_groups(groups = c("ENDIA case as outcome variable", "ENDIA EV antibody response as outcome variable"))
+  )
+
+as_raw_html(endia_3d_model_tidy_models_tidy_table)
+```
+
+```{r, echo = FALSE}
+gtsave(endia_3d_model_tidy_models_tidy_table, "figures/endia_3d_model_tidy_models_tidy_table.png")
+```
+
+**VIGR**
+
+```{r, echo = FALSE}
+vigr_3d_model_tidy <- vigr_3d_model %>% 
+  broom.mixed::tidy(effect = "fixed", conf.int = TRUE, exponentiate = TRUE) %>% 
+  add_column(outcome = "case")
+
+vigr_3d_abundance_as_outcome_tidy <- vigr_3d_abundance_as_outcome %>% 
+  broom.mixed::tidy(effect = "fixed", conf.int = TRUE, exponentiate = TRUE) %>% 
+    add_column(outcome = "abundance")
+
+vigr_3d_model_tidy_models_tidy <- rbind(vigr_3d_model_tidy, vigr_3d_abundance_as_outcome_tidy) %>% 
+    dplyr::rename(RR = estimate,
+               `CI lower` = conf.low,
+               `CI upper` = conf.high) %>% 
+    select(term, RR, `CI lower`, `CI upper`, p.value, outcome) %>% 
+    filter(term != "(Intercept)")
+
+vigr_3d_model_tidy_models_tidy_table <- vigr_3d_model_tidy_models_tidy %>%
+  mutate(term = case_match(term, !!!c("log_total_rpk" ~ "log(EV)"), .default = term)) %>% 
+  select(-outcome) %>% 
+  gt(rowname_col = "term") %>%
+  tab_header(
+    title = "Summary of GLM models for the 3D motif in VIGR"
+  ) %>%
+  cols_label(
+    term = "Predictor",
+    RR = "RR",
+    `CI lower` = "CI Lower",
+    `CI upper` = "CI Upper",
+    p.value = "Pr(>|z|)"
+  ) %>%
+  fmt_number(
+    columns = c(RR, `CI lower`, `CI upper`, p.value),
+    decimals = 3
+  ) %>%
+  cols_align(
+    align = "left",
+    columns = everything()
+  ) %>% 
+  tab_row_group(
+    label = "VIGR case as outcome variable",
+    rows = 1:6
+  ) %>% 
+  tab_row_group(
+    label = "VIGR EV antibody response as outcome variable",
+    rows = 7:12
+  ) %>% 
+  tab_style(
+    style = cell_fill(color = "lightgrey"),
+    locations = cells_row_groups(groups = c("VIGR case as outcome variable", "VIGR EV antibody response as outcome variable"))
+  )
+
+as_raw_html(vigr_3d_model_tidy_models_tidy_table)
+```
+
+```{r, echo = FALSE}
+gtsave(vigr_3d_model_tidy_models_tidy_table, "figures/vigr_3d_model_tidy_models_tidy_table.png")
+```

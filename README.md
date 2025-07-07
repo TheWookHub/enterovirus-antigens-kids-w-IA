@@ -14,14 +14,10 @@ the figures, please run the code in order of the Rmds.
 The files required to run these Rmd files can be obtained in
 [update_with_link_to_data]()
 
-- [Generate datafiles and produce Figure
-  01](01_figure_01_CXVB_antigen_mapping.md) : Rmd file
+- [Generate datafiles and produce antigen landscape maps, as shown in
+  Figure 01](01_figure_01_CXVB_antigen_mapping.md) : Rmd file
   [01_figure_01_CXVB_antigen_mapping.Rmd](01_figure_01_CXVB_antigen_mapping.Rmd)
 
-- [Produce alignments used in Figure 02](02_figure_02_alignments.md) :
-  Rmd file [02_figure_02_alignments.Rmd](02_figure_02_alignments.Rmd)
-
-- [Stratify by nest and age to show antigen landscape in individual
-  nests and in different sexes](03_stratify_by_nest_and_sex.md) : Rmd
-  file
-  [03_stratify_by_nest_and_sex.Rmd](03_stratify_by_nest_and_sex.Rmd)
+- [Stratify by sex to show antigen landscape in different sexes, as used
+  in Figure 02](02_figure_02B_sex_stratification.md) : Rmd file
+  [02_figure_02B_sex_stratification.Rmd](02_figure_02B_sex_stratification.Rmd)

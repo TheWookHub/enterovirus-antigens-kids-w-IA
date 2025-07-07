@@ -88,46 +88,9 @@ tidy_models_data <- rbind(endia_ev_model_poisson_tidy, vigr_ev_model_poisson_tid
     filter(term != "(Intercept)")
 ```
 
-``` r
-tidy_models_data_table <- tidy_models_data %>%
-  mutate(term = case_match(term, !!!c("log_total_rpk" ~ "log(EV)"), .default = term)) %>% 
-  select(-cohort) %>% 
-  gt(rowname_col = "term") %>%
-  tab_header(
-    title = "Summary of GLM model tests"
-  ) %>%
-  cols_label(
-    term = "Predictor",
-    RR = "RR",
-    `CI lower` = "CI Lower",
-    `CI upper` = "CI Upper",
-    p.value = "Pr(>|z|)"
-  ) %>%
-  fmt_number(
-    columns = c(RR, `CI lower`, `CI upper`, p.value),
-    decimals = 3
-  ) %>%
-  cols_align(
-    align = "left",
-    columns = everything()
-  ) %>% 
-  tab_row_group(
-    label = "ENDIA",
-    rows = 1:7
-  ) %>% 
-  tab_row_group(
-    label = "VIGR",
-    rows = 8:13
-  ) %>% 
-  tab_style(
-    style = cell_fill(color = "lightgrey"),
-    locations = cells_row_groups(groups = c("ENDIA", "VIGR"))
-  )
+GLM models output for ENDIA and VIGR table
 
-as_raw_html(tidy_models_data_table)
-```
-
-<div id="glxpetxlek" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="ajkilxosyg" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
   &#10;  <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false" style="-webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'; display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3;" bgcolor="#FFFFFF">
   <thead style="border-style: none;">
     <tr class="gt_heading" style="border-style: none; background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3;" bgcolor="#FFFFFF" align="center">
@@ -218,8 +181,6 @@ as_raw_html(tidy_models_data_table)
 </table>
 </div>
 
-## Supplementary information :heavy_plus_sign:
-
 <details>
 
 <summary>
@@ -235,6 +196,7 @@ as_raw_html(tidy_models_data_table)
 endia_ev_model_w_abundance <- glmmTMB(formula = total_abundance ~ Condition + infant_HLA + age_sample_collection_month + infant_sex + maternal_T1D + (1|deidentified_nest_id_new) + (1|mother_id),
        family = poisson(link = "log"),
         weights = weightTEDDY,
+       offset = log_lib,
        data = endia_ev_for_stats)
 
 endia_ev_model_w_abundance %>% summary()
@@ -247,48 +209,50 @@ endia_ev_model_w_abundance %>% summary()
     ##     (1 | mother_id)
     ## Data: endia_ev_for_stats
     ## Weights: weightTEDDY
+    ##  Offset: log_lib
     ## 
     ##       AIC       BIC    logLik -2*log(L)  df.resid 
-    ##    5962.6    5992.0   -2971.3    5942.6       130 
+    ##    5809.0    5838.5   -2894.5    5789.0       130 
     ## 
     ## Random effects:
     ## 
     ## Conditional model:
     ##  Groups                   Name        Variance Std.Dev.
-    ##  deidentified_nest_id_new (Intercept) 2.922    1.709   
-    ##  mother_id                (Intercept) 7.458    2.731   
+    ##  deidentified_nest_id_new (Intercept) 0.952    0.9757  
+    ##  mother_id                (Intercept) 1.916    1.3840  
     ## Number of obs: 140, groups:  deidentified_nest_id_new, 50; mother_id, 124
     ## 
     ## Conditional model:
     ##                             Estimate Std. Error z value Pr(>|z|)    
-    ## (Intercept)                  3.06724    0.91005   3.370 0.000751 ***
-    ## ConditionCase                0.73321    0.51432   1.426 0.153989    
-    ## infant_HLADR3X_DR33          2.59258    0.80430   3.223 0.001267 ** 
-    ## infant_HLADR4X_DR44          1.83812    0.76801   2.393 0.016695 *  
-    ## infant_HLADRXX               1.06903    0.85093   1.256 0.209003    
-    ## age_sample_collection_month  0.08519    0.02041   4.173 3.01e-05 ***
-    ## infant_sexMale              -0.52257    0.62301  -0.839 0.401590    
-    ## maternal_T1D1                0.03835    0.55757   0.069 0.945164    
+    ## (Intercept)                 -2.11856    0.49551  -4.276 1.91e-05 ***
+    ## ConditionCase                0.60342    0.27502   2.194   0.0282 *  
+    ## infant_HLADR3X_DR33          0.74077    0.42626   1.738   0.0822 .  
+    ## infant_HLADR4X_DR44          0.63327    0.40645   1.558   0.1192    
+    ## infant_HLADRXX               0.29959    0.44244   0.677   0.4983    
+    ## age_sample_collection_month  0.02425    0.01137   2.132   0.0330 *  
+    ## infant_sexMale              -0.21143    0.34355  -0.615   0.5383    
+    ## maternal_T1D1                0.04629    0.28696   0.161   0.8719    
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 ``` r
 endia_ev_model_w_abundance %>% 
   broom.mixed::tidy(effects = "fixed", conf.int = TRUE, exponentiate = TRUE) %>% 
-  select(term, estimate, p.value, conf.low, conf.high)
+  select(term, estimate, p.value, conf.low, conf.high) %>% 
+  mutate(significant = ifelse(p.value <= 0.10, T, F))
 ```
 
-    ## # A tibble: 8 × 5
-    ##   term                        estimate   p.value conf.low conf.high
-    ##   <chr>                          <dbl>     <dbl>    <dbl>     <dbl>
-    ## 1 (Intercept)                   21.5   0.000751     3.61     128.  
-    ## 2 ConditionCase                  2.08  0.154        0.760      5.70
-    ## 3 infant_HLADR3X_DR33           13.4   0.00127      2.76      64.6 
-    ## 4 infant_HLADR4X_DR44            6.28  0.0167       1.39      28.3 
-    ## 5 infant_HLADRXX                 2.91  0.209        0.549     15.4 
-    ## 6 age_sample_collection_month    1.09  0.0000301    1.05       1.13
-    ## 7 infant_sexMale                 0.593 0.402        0.175      2.01
-    ## 8 maternal_T1D1                  1.04  0.945        0.348      3.10
+    ## # A tibble: 8 × 6
+    ##   term                        estimate   p.value conf.low conf.high significant
+    ##   <chr>                          <dbl>     <dbl>    <dbl>     <dbl> <lgl>      
+    ## 1 (Intercept)                    0.120 0.0000191   0.0455     0.317 TRUE       
+    ## 2 ConditionCase                  1.83  0.0282      1.07       3.13  TRUE       
+    ## 3 infant_HLADR3X_DR33            2.10  0.0822      0.910      4.84  TRUE       
+    ## 4 infant_HLADR4X_DR44            1.88  0.119       0.849      4.18  FALSE      
+    ## 5 infant_HLADRXX                 1.35  0.498       0.567      3.21  FALSE      
+    ## 6 age_sample_collection_month    1.02  0.0330      1.00       1.05  TRUE       
+    ## 7 infant_sexMale                 0.809 0.538       0.413      1.59  FALSE      
+    ## 8 maternal_T1D1                  1.05  0.872       0.597      1.84  FALSE
 
 **VIGR**
 
@@ -351,98 +315,3 @@ vigr_ev_model_w_abundance %>%
     ## 7 DiabetesFather       0.894  0.529     0.630     1.27 
     ## 8 DiabetesMother       0.678  0.0212    0.487     0.943
     ## 9 DiabetesSister       0.658  0.0155    0.468     0.923
-
-### Adding additional genera for ENDIA
-
-Getting the top genera present in both cases and controls
-
-``` r
-endia_top_genera_in_both_conditions <- endia_virscan_onset %>%
-  group_by(condition, taxon_genus) %>%
-  summarise(total_abundance = sum(abundance, na.rm = TRUE), .groups = "drop") %>%
-  group_by(condition) %>%
-  slice_max(total_abundance, n = 16) %>%  # get top 16 abundant genera per condition
-  ungroup() %>%
-  semi_join(            # keep only genera that appear in both conditions' top 16
-    count(., taxon_genus) %>% filter(n == 2), 
-    by = "taxon_genus"
-  ) %>%
-  group_by(taxon_genus) %>%
-  mutate(total_abundance_overall = sum(total_abundance)) %>% # get total abundance for both conditions combined per genus
-  ungroup() %>%
-  arrange(desc(total_abundance_overall), taxon_genus, condition) # arrange so top most abundant genera are first
-
-endia_top_genera <- endia_top_genera_in_both_conditions %>% pull(taxon_genus) %>% unique()
-
-endia_top_genera
-```
-
-    ##  [1] "Enterovirus"         "Mastadenovirus"      "Cytomegalovirus"    
-    ##  [4] "Orthopneumovirus"    "Betacoronavirus"     "Simplexvirus"       
-    ##  [7] "Lymphocryptovirus"   "Mamastrovirus"       "Roseolovirus"       
-    ## [10] "Orthopoxvirus"       "Influenzavirus A"    "Rhadinovirus"       
-    ## [13] "Alphapapillomavirus" "Lentivirus"
-
-``` r
-# Function to fit a GLM model for a single genus 
-run_glms_on_endia_genera_abundance <- function(df) {
-  
-  unique_genera <- df %>% pull(taxon_genus) %>% unique()
-  
-   map(set_names(unique_genera), function(genus) {
-    single_genus_data <- df %>% filter(taxon_genus == genus)
-    
-    glmmTMB(formula = total_abundance ~ Condition + infant_HLA + age_sample_collection_month + infant_sex + maternal_T1D + offset(log_lib) + (1|deidentified_nest_id_new) + (1|mother_id),
-                   weights = weightTEDDY, 
-                   data = single_genus_data,
-                   family = poisson(link = "log"))
-  })
-}
-
-# extract and tidy GLM results
-
-tidy_glm_results <- function(glm_list) {
-  tidy_glm_results_list <- map(names(glm_list), function(genus) {
-    broom.mixed::tidy(glm_list[[genus]], effects = "fixed", conf.int = TRUE, exponentiate = TRUE) %>%
-      mutate(genus = genus, .before = effect) %>% 
-      rename(risk_ratio = estimate,
-         ci_low = conf.low,
-         ci_high = conf.high)
-  })
-  
-  # combine results into a single dataframe and apply multiple testing correction
-  list_rbind(tidy_glm_results_list) %>%
-    mutate(p_adjust_BH = p.adjust(p.value, method = "BH")) %>% 
-    mutate(significant = ifelse(p_adjust_BH <= 0.10, T, F))
-}
-```
-
-``` r
-endia_abundance_top_genera <- endia_for_stats %>% filter(taxon_genus %in% endia_top_genera) # top 14 in cases and control
-
-endia_abundance_top_genera_glms <- run_glms_on_endia_genera_abundance(endia_abundance_top_genera)
-
-endia_abundance_top_genera_glms_tidy <- tidy_glm_results(endia_abundance_top_genera_glms)
-```
-
-``` r
-endia_abundance_top_genera_glms_tidy %>% 
-  filter(genus != "Simplexvirus") %>% 
-  filter(genus != "Lentivirus") %>% 
-  filter(genus != "Mamastrovirus") %>% 
-  filter(genus != "Roseolovirus") %>% 
-  filter(term == "ConditionCase") %>% 
-  mutate(genus_w_pvalue = paste(genus, "(",round(p_adjust_BH, digits = 2),")")) %>% 
-  arrange(desc(risk_ratio)) %>% 
-  mutate(genus_w_pvalue = factor(genus_w_pvalue, levels = rev(unique(genus_w_pvalue)))) %>% 
-  ggplot(aes(x = risk_ratio, y = genus_w_pvalue)) +
-  geom_point(color = "black") +
-  geom_errorbarh(aes(xmin = ci_low, xmax = ci_high), height = 0.2, color = "black") +
-  geom_vline(xintercept = 1, linetype = "dashed", color = "red") + # Reference line
-  theme_minimal() +
-  labs(x = "Risk Ratio", y = "Genus and adjusted BH P value") +
-  theme(axis.text.y = element_text(size = 10, face = "italic")) +
-  xlim(0, 4)
-```
-
-![](S01_ev_stats_vigr_endia_onset_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->

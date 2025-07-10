@@ -14,10 +14,14 @@ the figures, please run the code in order of the Rmds.
 The files required to run these Rmd files can be obtained in
 [update_with_link_to_data]()
 
-- [Generate datafiles and produce antigen landscape maps, as shown in
-  Figure 01](01_figure_01_CXVB_antigen_mapping.md) : Rmd file
+- [Combine VirScan data and metadata for both
+  cohorts](00_prepare_datasets.md) : Rmd file
+  [00_prepare_datasets.Rmd](00_prepare_datasets.Rmd)
+
+- [Produce antigen landscape maps, as shown in Figure
+  01](01_figure_01_CXVB_antigen_mapping.md) : Rmd file
   [01_figure_01_CXVB_antigen_mapping.Rmd](01_figure_01_CXVB_antigen_mapping.Rmd)
 
 - [Stratify by sex to show antigen landscape in different sexes, as used
-  in Figure 02](02_figure_02B_sex_stratification.md) : Rmd file
+  in Figure 02B](02_figure_02B_sex_stratification.md) : Rmd file
   [02_figure_02B_sex_stratification.Rmd](02_figure_02B_sex_stratification.Rmd)

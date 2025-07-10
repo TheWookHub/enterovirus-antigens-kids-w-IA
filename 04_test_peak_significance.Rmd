@@ -15,14 +15,15 @@ library(glmmTMB)
 library(gt)
 ```
 
-Use data prepared in `01_figure_01_CXVB_antigen_mapping.Rmd` and add extra metadata for VIGR so we can include maternal T1D status in the models
+Read in data prepared in `00_prepare_datasets.Rmd` 
+and add normalised counts measured in RPK and library size log variable to use as an offset for sequencing depth
 
 ```{r}
 endia_virscan_onset <- read_rds("cache/endia_virscan_metadata.rds") %>%
   filter(onset_visit == 1) %>% 
   group_by(sample_id) %>% 
   mutate(rpk = abundance / sum(abundance) * 100000,
-         log_lib = log(sum(abundance) + 1e-8)) %>%  # add offset for testing 
+         log_lib = log(sum(abundance) + 1e-8)) %>%  # add offset 
   ungroup()
 
 vigr_virscan_metadata <- read_rds("cache/vigr_virscan_metadata.rds") %>% 
@@ -30,13 +31,6 @@ vigr_virscan_metadata <- read_rds("cache/vigr_virscan_metadata.rds") %>%
   mutate(rpk = abundance / sum(abundance) * 100000,
          log_lib = log(sum(abundance) + 1e-8)) %>% 
   ungroup()
-
-vigr_extra_metadata <- readxl::read_xlsx("raw_data/metadata/VIGR_HLA.xlsx") %>% 
-  select(Participant_Id, UNSW, Diabetes, Risk_group) %>% 
-  mutate(maternal_T1D = if_else(Diabetes == "Mother", "1", "0"))
-
-vigr_virscan_metadata_w_maternal_T1D <- vigr_virscan_metadata %>% 
-  left_join(vigr_extra_metadata, join_by(sample_id == Participant_Id, UNSW))
 ```
 
 ```bash
@@ -58,7 +52,7 @@ endia_motif_results <- endia_blastp_ev_motifs %>%
     left_join(endia_virscan_onset, by = join_by(qaccver == pep_id)) 
 
 vigr_motif_results <- vigr_blastp_ev_motifs %>% 
-   left_join(vigr_virscan_metadata_w_maternal_T1D, by = join_by(qaccver == pep_id))
+   left_join(vigr_virscan_metadata, by = join_by(qaccver == pep_id))
 ```
 
 ## ENDIA
@@ -88,7 +82,7 @@ endia_motif_w_genera %>%
             vjust = -2, hjust = -0.7, size = 3, color = "purple") +
   facet_wrap(~ saccver) +
   theme_minimal(base_size = 14) +
-  theme(legend.position = "bottom",
+  theme(legend.position = "right",
         line = element_blank(),
       axis.text.x = element_blank(), 
       strip.text = element_text(face = "bold")) +
@@ -104,7 +98,7 @@ ggsave("figures/ev_hits_to_motifs.png", width = 8, height = 7)
 Having a look at the BLAST results for the VP1 motif in ENDIA, stratified by sex:
 Female controls appear to have a stronger reaction compared to male controls. However, male cases have a stronger reaction compared to female cases. Black numbers are number of peptides and purple number are number of samples
 
-```{r, echo = FALSE}
+```{r, echo = FALSE, fig.height=7}
 endia_motif_results %>%
   group_by(saccver, condition, taxon_genus, infant_sex) %>% 
   summarise(total_rpk = sum(rpk),
@@ -126,7 +120,7 @@ endia_motif_results %>%
             vjust = -2, hjust = -0.7, size = 3, color = "purple") +
   facet_wrap(~ infant_sex) +
   theme_minimal(base_size = 14) +
-  theme(legend.position = "bottom",
+  theme(legend.position = "right",
         line = element_blank(),
       axis.text.x = element_blank(), 
       strip.text = element_text(face = "bold")) +
@@ -138,7 +132,7 @@ tidy_looksie <- function(glm_model) {
     glm_model %>% 
     broom.mixed::tidy(effect = "fixed", conf.int = TRUE, exponentiate = TRUE) %>% 
     select(term, estimate, p.value, conf.low, conf.high) %>% 
-    mutate(significant = ifelse(p.value <= 0.10, T, F))}
+    mutate(significant = ifelse(p.value < 0.1, T, F))}
 ```
 
 ### Stats ENDIA
@@ -196,7 +190,7 @@ endia_3d_model_xx %>% tidy_looksie()
 endia_3d_model_xy %>% tidy_looksie()
 ```
 
-3D doesn't seem to be a good predictor for IA. However, there is enrichment of 3D in cases 
+3D does not appear to be a good predictor for IA. However, there is enrichment of 3D in cases 
 
 This enrichment appears in a statistical test too:
 
@@ -293,7 +287,7 @@ vigr_motif_w_genera %>%
             vjust = -2, hjust = -0.7, size = 3, color = "purple") +
   facet_wrap(~ saccver) +
   theme_minimal(base_size = 14) +
-  theme(legend.position = "bottom",
+  theme(legend.position = "right",
         line = element_blank(),
       axis.text.x = element_blank(), 
       strip.text = element_text(face = "bold")) +

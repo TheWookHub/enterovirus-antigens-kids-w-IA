@@ -64,7 +64,7 @@ endia_prop_samples_per_genus <- endia_virscan_onset %>%
 
 ```{r, fig.height=8}
 endia_prop_samples_per_genus_plot <- endia_prop_samples_per_genus %>% 
-  mutate(condition = factor(condition, levels = c("Control", "Case"))) %>% # change order so cases come above controls in the plot
+  mutate(condition = factor(condition, levels = c("Control", "Case"))) %>% # aeschange order so cases come above controls in the plot
   ggplot(aes(x = taxon_genus, y = proportion, fill = condition)) +
   geom_col(position = "dodge2") +
   geom_text(aes(label = round(no_pos_samples)), 

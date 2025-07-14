@@ -158,6 +158,8 @@ controls vs cases.
 
 ## Supplementary information :heavy_plus_sign:
 
+This section visualises the antigen maps using different y-axes.
+
 <details>
 
 <summary>

@@ -1,6 +1,6 @@
-# Function to calculate RPK and fold change for cases and controls and join to BLAST results
+# Function to calculate RPK and the mean rpk difference for cases and controls and join to BLAST results
 
-calculate_rpk_fold_change <- function(data, sample_id_col, condition_col, pep_id_col, abundance_col, blastp_data) {
+calculate_mean_rpk_difference <- function(data, sample_id_col, condition_col, pep_id_col, abundance_col, blastp_data) {
   # Calculate RPK and mean RPK per peptide
   rpk_mean_peptide_hits <- data %>%
     group_by({{ sample_id_col }}) %>% 
@@ -27,12 +27,12 @@ calculate_rpk_fold_change <- function(data, sample_id_col, condition_col, pep_id
     distinct() %>% 
     ungroup()
   
-  # Join BLAST results to mean RPK calculations for case and control and calculate fold change
+  # Join BLAST results to mean RPK calculations for case and control and calculate mean_rpk_difference
   blastp_data %>%
     left_join(mean_rpk_cc_reduced, by = join_by(qaccver == {{ pep_id_col }})) %>%
     group_by(saccver) %>% #protein ID
-    mutate(fold_change = mean_rpk_per_pepCase - mean_rpk_per_pepControl) %>%
+    mutate(mean_rpk_difference = mean_rpk_per_pepCase - mean_rpk_per_pepControl) %>%
     drop_na() %>% 
     ungroup() %>% 
-    select("seqid" = qaccver, "start" = sstart, "end" = send, mean_rpk_per_pepCase, mean_rpk_per_pepControl, fold_change, saccver)
+    select("seqid" = qaccver, "start" = sstart, "end" = send, mean_rpk_per_pepCase, mean_rpk_per_pepControl, mean_rpk_difference, saccver)
 }

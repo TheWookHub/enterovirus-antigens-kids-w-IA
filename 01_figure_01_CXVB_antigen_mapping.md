@@ -6,7 +6,7 @@ library(tidyverse)
 library(ampir)
 library(patchwork)
 source("scripts/read_blast.R")
-source("scripts/calculate_rpk_fold_change.R")
+source("scripts/calculate_mean_rpk_difference.R")
 source("scripts/calculate_moving_sum.R")
 source("scripts/ms_plot_clean.R")
 source("scripts/read_ev_polyprotein_uniprot_metadata.R")
@@ -51,9 +51,9 @@ blastp -task blastp-short -query cache/endia_virscan_hits_peptides.fasta -db raw
 ``` r
 ENDIA_blastp_evB1 <- read_blast("raw_data/blast_results/blastp_endia_evB1_all_virscan_peps.blast")
 
-endia_fc <- calculate_rpk_fold_change(endia_virscan_onset, sample_id, condition, pep_id, abundance, ENDIA_blastp_evB1)
+endia_fc <- calculate_mean_rpk_difference(endia_virscan_onset, sample_id, condition, pep_id, abundance, ENDIA_blastp_evB1)
 
-endia_ms <- calculate_moving_sum(endia_fc, value_column = fold_change, win_size = 32, step_size = 4)
+endia_ms <- calculate_moving_sum(endia_fc, value_column = mean_rpk_difference, win_size = 32, step_size = 4)
 
 endia_ms_plot <- endia_ms %>% 
   ms_plot_clean() +
@@ -82,9 +82,9 @@ blastp -task blastp-short -query cache/vigr_virscan_hits_peptides.fasta -db raw_
 ``` r
 VIGR_blastp_evB1 <- read_blast("raw_data/blast_results/blastp_vigr_evB1_all_virscan_peps.blast")
 
-vigr_fc <- calculate_rpk_fold_change(vigr_virscan_metadata, sample_id, Condition, pep_id, abundance, VIGR_blastp_evB1)
+vigr_fc <- calculate_mean_rpk_difference(vigr_virscan_metadata, sample_id, Condition, pep_id, abundance, VIGR_blastp_evB1)
 
-vigr_ms <- calculate_moving_sum(vigr_fc, value_column = fold_change, win_size = 32, step_size = 4)
+vigr_ms <- calculate_moving_sum(vigr_fc, value_column = mean_rpk_difference, win_size = 32, step_size = 4)
 
 vigr_ms_plot <- vigr_ms %>% 
   ms_plot_clean() +
@@ -164,13 +164,13 @@ This section visualises the antigen maps using different y-axes.
 
 <summary>
 
-<i> Figure 1 using `fold_change` instead of `moving_sum` </i>
+<i> Figure 1 using `mean_rpk_difference` instead of `moving_sum` </i>
 </summary>
 
 ``` r
 vigr_fc_plot <- vigr_fc %>%
-    mutate(Condition = if_else(fold_change > 0, "Case", "Control")) %>% 
-    ggplot(aes(x = (start + end) / 2, y = fold_change, fill = Condition)) +
+    mutate(Condition = if_else(mean_rpk_difference > 0, "Case", "Control")) %>% 
+    ggplot(aes(x = (start + end) / 2, y = mean_rpk_difference, fill = Condition)) +
     geom_bar(stat = "identity") +
     labs(x = "", fill = "", y = "") +
     theme_minimal() +
@@ -181,8 +181,8 @@ vigr_fc_plot <- vigr_fc %>%
     ggtitle("VIGR")
 
 endia_fc_plot <- endia_fc %>%
-    mutate(Condition = if_else(fold_change > 0, "Case", "Control")) %>% 
-    ggplot(aes(x = (start + end) / 2, y = fold_change, fill = Condition)) +
+    mutate(Condition = if_else(mean_rpk_difference > 0, "Case", "Control")) %>% 
+    ggplot(aes(x = (start + end) / 2, y = mean_rpk_difference, fill = Condition)) +
     geom_bar(stat = "identity") +
     labs(x = "", fill = "", y = "") +
     theme_minimal() +
@@ -216,8 +216,7 @@ wrap_elements(combined_fc_plots) +
 
 <summary>
 
-<i> Figure 1 traditional fold change (division instead of subtraction
-</i>
+<i> Figure 1 using traditional fold change </i>
 </summary>
 
 ``` r

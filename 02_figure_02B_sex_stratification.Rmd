@@ -13,7 +13,7 @@ library(tidyverse)
 library(ampir)
 library(patchwork)
 source("scripts/read_blast.R")
-source("scripts/calculate_rpk_fold_change.R")
+source("scripts/calculate_mean_rpk_difference.R")
 source("scripts/calculate_moving_sum.R")
 source("scripts/ms_plot_clean.R")
 source("scripts/read_ev_polyprotein_uniprot_metadata.R")
@@ -49,8 +49,8 @@ EV_B1_plot <- plot_ev_polyprotein(coxsackievirusB1_P08291)
 endia_sex_stratified_ms <- endia_virscan_onset %>%
   group_by(infant_sex) %>% 
   group_map(~ .x %>%
-    calculate_rpk_fold_change(sample_id, condition, pep_id, abundance, ENDIA_blastp_evB1) %>%
-    calculate_moving_sum(fold_change, 32, 4) %>% 
+    calculate_mean_rpk_difference(sample_id, condition, pep_id, abundance, ENDIA_blastp_evB1) %>%
+    calculate_moving_sum(mean_rpk_difference, 32, 4) %>% 
           mutate(infant_sex = .y$infant_sex), # return group label back
     .keep = TRUE)
 
@@ -72,8 +72,8 @@ endia_sex_plots_same_y <- wrap_plots(EV_B1_plot + ggtitle("ENDIA"), wrap_plots(e
 vigr_sex_stratified_ms <- vigr_virscan_metadata %>%
   group_by(Sex) %>% 
   group_map(~ .x %>%
-    calculate_rpk_fold_change(sample_id, Condition, pep_id, abundance, VIGR_blastp_evB1) %>%
-    calculate_moving_sum(fold_change, 32, 4) %>%
+    calculate_mean_rpk_difference(sample_id, Condition, pep_id, abundance, VIGR_blastp_evB1) %>%
+    calculate_moving_sum(mean_rpk_difference, 32, 4) %>%
      mutate(Sex = .y$Sex),
     .keep = TRUE)
 

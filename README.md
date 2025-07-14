@@ -49,18 +49,17 @@ figure in the paper.
   [02_figure_02B_sex_stratification.Rmd](02_figure_02B_sex_stratification.Rmd)
 
 - [Extended Data Fig 02 and 03: Detection of viral antigens in each
-  cohort](S03_genera_detected_w_antibody_levels.md) : Rmd file
-  [S03_genera_detected_w_antibody_levels.Rmd](S03_genera_detected_w_antibody_levels.Rmd)
+  cohort](05_genera_detected_w_antibody_levels.md) : Rmd file
+  [05_genera_detected_w_antibody_levels.Rmd](05_genera_detected_w_antibody_levels.Rmd)
 
 - [Extended Data Table 1: Demographic and genetic characteristics tables
-  for each cohort](S04_demographic_tables.md) : Rmd file
-  [S04_demographic_tables.Rmd](S04_demographic_tables.Rmd)
+  for each cohort](06_characteristics_tables.md) : Rmd file
+  [06_characteristics_tables.Rmd](06_characteristics_tables.Rmd)
 
 - [Extended Data Table 2: GLMM results for antibody response to
-  *Enterovirus* for each cohort](S01_ev_stats_vigr_endia_onset.md) : Rmd
-  file
-  [S01_ev_stats_vigr_endia_onset.Rmd](S01_ev_stats_vigr_endia_onset.Rmd)
+  *Enterovirus* for each cohort](07_EV_GLMMS.md) : Rmd file
+  [07_EV_GLMMS.Rmd](07_EV_GLMMS.Rmd)
 
 - [Extended Data Table 3 and 4: GLMM results for 3D and VP1 motif
-  enrichment for each cohort](04_test_peak_significance.md) : Rmd file
-  [04_test_peak_significance.Rmd](04_test_peak_significance.Rmd)
+  enrichment for each cohort](08_GLMMs_on_EV_motifs.md) : Rmd file
+  [08_GLMMs_on_EV_motifs.Rmd](08_GLMMs_on_EV_motifs.Rmd)

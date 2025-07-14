@@ -131,7 +131,7 @@ endia_combined_rpk_and_samples_genera_plot <- endia_prop_samples_per_genus_plot_
 endia_combined_rpk_and_samples_genera_plot + plot_annotation(tag_levels = "A")
 ```
 
-![](S03_genera_detected_w_antibody_levels_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
+![](05_genera_detected_w_antibody_levels_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
 
 **Figure S03.1:** Detection of viral antigens corresponding to 72 genera
 in the ENDIA cohort, stratified by case (n = 44) and control (n = 97)
@@ -221,7 +221,7 @@ vigr_combined_rpk_and_samples_genera_plot <- vigr_prop_samples_per_genus_plot_cl
 vigr_combined_rpk_and_samples_genera_plot +  plot_annotation(tag_levels = "A")
 ```
 
-![](S03_genera_detected_w_antibody_levels_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
+![](05_genera_detected_w_antibody_levels_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
 
 **Figure S03.2:** Detection of viral antigens corresponding to 74 genera
 in the VIGR cohort, stratified by case (n = 21) and control (n = 21)

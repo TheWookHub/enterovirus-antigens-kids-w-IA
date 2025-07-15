@@ -1,5 +1,5 @@
 
-# Antigen mapping to multiple *Enterovirus* polyproteins using the ENDIA cohort
+# Generate circular plots to compare antibody enrichment across nine *Enterovirus* polyproteins using the ENDIA cohort
 
 Here we used nine *Enterovirus* polyproteins, including coxsackieviruses
 (CV\*), rhinoviruses (RV\*) and poliovirus (PV1) - P08291 (CVB1), P03313
@@ -73,124 +73,124 @@ coxsackievirusB1_P08291 <- read_ev_polyprotein_uniprot_metadata("raw_data/coxsac
 
 seg_data <- coxsackievirusB1_P08291 %>%
   mutate(
-    seg.name = "PolyG",
+    seg_name = "PolyG",
     start = start - 1,
-    seg.sum.start = start,
-    seg.sum.end = end,
-    angle.start = c("270", "317.397727272727", "363.829545454545", "405.431818181818", 
+    seg_sum_start = start,
+    seg_sum_end = end,
+    angle_start = c("270", "317.397727272727", "363.829545454545", "405.431818181818", 
                     "430.613636363636", "478.011363636364", "500.295454545455",
                     "547.693181818182", "579.636363636364", "600.954545454545"),
-    angle.end = c("315.397727272727", "361.829545454545", "403.431818181818", 
+    angle_end = c("315.397727272727", "361.829545454545", "403.431818181818", 
                   "428.613636363636", "476.011363636364", "498.295454545455", 
                   "545.693181818182", "577.636363636364", "598.954545454545", "628"),
-    seg.start = 0,
-    seg.end = seg.sum.end - seg.sum.start
+    seg_start = 0,
+    seg_end = seg_sum_end - seg_sum_start
   ) %>%
-   select(ev_proteins, angle.start, angle.end, seg.sum.start,
-          seg.sum.end, seg.start, seg.end, note) %>%
+   select(ev_proteins, angle_start, angle_end, seg_sum_start,
+          seg_sum_end, seg_start, seg_end, note) %>%
   as.matrix()
 ```
 
-``` r
-create_circos_data_frames <- function(data, prot_ids) {
-  for (id in prot_ids) {
-    #Create object name
-    object_name <- paste0("circos_", tolower(gsub(".*POLG_", "", id)))
+Create mapping data for CVB1. This maps each protein to its start and
+end positions and it also calculates an offset used to align windows
+correctly within each protein
 
-  # Create mapping data for Coxsackie B1
-    circos_data <- data %>% 
-      filter(saccver == id) %>% 
-      mutate(prot_names = case_when(
-        window_start <= 69 ~ "VP4",
-        window_start <= 332 ~ "VP2",
-        window_start <= 570 ~ "VP3",
-        window_start <= 848 ~ "VP1",
-        window_start <= 998 ~ "2A",
-        window_start <= 1097 ~ "2B",
-        window_start <= 1426 ~ "2C",
-        window_start <= 1537 ~ "3AB",
-        window_start <= 1720 ~ "3C",
-        window_start <= 2183 ~ "3D"
-      )) %>% 
-      mutate(chromStart = case_when(
-        window_start <= 69 ~ window_start - 0,
-        window_start <= 332 ~ window_start - 69,
-        window_start <= 570 ~ window_start - 332,
-        window_start <= 848 ~ window_start - 570,
-        window_start <= 998 ~ window_start - 848,
-        window_start <= 1097 ~ window_start - 998,
-        window_start <= 1426 ~ window_start - 1097,
-        window_start <= 1537 ~ window_start - 1426,
-        window_start <= 1720 ~ window_start - 1537,
-        window_start <= 2183 ~ window_start - 1720
-      )) %>% 
-      select(prot_names, chromStart, moving_sum) %>% 
-      distinct() %>% 
-      mutate(chromStart = as.integer(chromStart)) %>% 
-      data.frame()
-    
-    #Assign their names and write the data frames
-    assign(object_name, circos_data, envir = .GlobalEnv)
-  }
+``` r
+ev_prot_map <- coxsackievirusB1_P08291 %>% 
+  select(ev_proteins, map_end = end) %>% 
+  mutate(map_start = lag(map_end, default = 0) + 1, # map_start for a protein is the map_end of the previous one + 1
+         offset = map_start - 1) #value to subtract is the start of the mapping region - 1
+```
+
+Function to make a named list of `data.frame` objects for each EV
+polyprotein as input for `circos` It ensures proper alignment of windows
+for each polyprotein
+
+``` r
+create_circos_data_list <- function(data) {
+  
+  # create nested tibble
+  nested_data <- data %>%
+    left_join(ev_prot_map, by = join_by(between(window_start, map_start, map_end))) %>% # match windows to corresponding protein regions
+    mutate(chromStart = as.integer(window_start - offset)) %>% # adjust peptide window to align within polyprotein
+    select(saccver, ev_proteins, chromStart, moving_sum) %>%
+    distinct() %>%
+    group_by(saccver) %>%
+    nest() %>%
+    mutate(object_name = paste0("circos_", tolower(str_remove(saccver, ".*POLG_"))))
+  
+  # create named list of tibbles
+  circos_list_of_tibbles <- set_names(nested_data$data, nested_data$object_name)
+  
+  # convert every tibble in the list to a standard data.frame as required for circos
+  circos_list_of_dataframes <- map(circos_list_of_tibbles, as.data.frame)
+
+  circos_list_of_dataframes
 }
 
-prot_id_list <- unique(endia_nine_evs_ms$saccver)
 
-create_circos_data_frames(endia_nine_evs_ms, prot_id_list)
+circos_data_list <- create_circos_data_list(endia_nine_evs_ms)
 ```
 
-### Create the circular plot of antigen maps for nine different EV genome polyproteins
+### Generating the multi-layered circos plot to visualise antigen enrichment across nine EV polyproteins
+
+The circos plot is built by layers. The outside layer is the genome
+segments (`seg_data`), which in this case is the CVB1 polyprotein. The
+inside layers are the antigen maps showing enrichment relative to the
+proteins from the CVB1 polyprotein.
 
 ``` r
-protein_colours <- c(
-  "VP4" = "#428984",
-  "VP2" = "#6FC0EE",
-  "VP3" = "#26DED8E6",
-  "VP1" = "#C578E6",
-  "2A" = "#F6F4D6",
-  "2B" = "#D9E8E5",
-  "2C" = "#EBF5D8",
-  "3AB" = "#EDD9BA",
-  "3C" = "#EBD2D0",
-  "3D" = "#FFB19A")
+# create plotting parameters
+plot_params <- tibble(
+  df_name = c(
+    "circos_cxb3n", "circos_cxb1j", "circos_cxb4j", "circos_cxa9",
+    "circos_cxa24", "circos_cxa21", "circos_hrv1a", "circos_hrv14", "circos_pol1m"),
+  radius = seq(from = 360, to = 40, by = -40)) %>%
+  mutate(mapping_data = map(df_name, ~ circos_data_list[[.x]]))
 
-order_list <- c("1. CVB3", "2. CVB1", "3. CVB4", "4. CVA9", "5. CVA24", "6. CVA21", "7. RV-A1", "8. RV-B14", "9. PV1")
-zoom_3D <- c("1720", "2182", "0", "462", "600.954545454545", "628")
+protein_colours <- tribble(
+  ~prot, ~col,
+  "VP4", "#428984",
+  "VP2", "#6FC0EE",
+  "VP3", "#26DED8E6",
+  "VP1", "#C578E6",
+  "2A",  "#F6F4D6",
+  "2B",  "#D9E8E5",
+  "2C",  "#EBF5D8",
+  "3AB", "#EDD9BA",
+  "3C",  "#EBD2D0",
+  "3D",  "#FFB19A") %>%
+  deframe()
 
-par(mar=c(0, 0, 0, 0));
-plot(c(1,800) , c(1,800) , type="n", axes=FALSE, xlab="", ylab="", main="");
-legend(680,800, order_list, cex = 0.75, title = "Epitope landscape across nine enteroviruses", bty = "n");
-circos(R=400, cir=seg_data, type="chr", col = protein_colours, print.chr.lab=TRUE, W=10, scale=FALSE, cex = 10);
-circos(R=360, cir=seg_data, W=40, mapping=circos_cxb3n, type="b2", B=FALSE, cutoff=0, 
-       col=c("#d73027", "#4575b4"),
-       lwd=1);
-circos(R=320, cir=seg_data, W=40, mapping=circos_cxb1j, type="b2", B=FALSE, cutoff=0, 
-       col=c("#d73027", "#4575b4"), 
-       lwd=1);
-circos(R=280, cir=seg_data, W=40, mapping=circos_cxb4j, type="b2", B=FALSE, cutoff=0, 
-       col=c("#d73027", "#4575b4"), 
-       lwd=1);
-circos(R=240, cir=seg_data, W=40, mapping=circos_cxa9, type="b2", B=FALSE, cutoff=0, 
-       col=c("#d73027", "#4575b4"), 
-       lwd=1);
-circos(R=200, cir=seg_data, W=40, mapping=circos_cxa24, type="b2", B=FALSE, cutoff=0, 
-       col=c("#d73027", "#4575b4"), 
-       lwd=1);
-circos(R=160, cir=seg_data, W=40, mapping=circos_cxa21, type="b2", B=FALSE, cutoff=0, 
-       col=c("#d73027", "#4575b4"), 
-       lwd=1);
-circos(R=120, cir=seg_data, W=40, mapping=circos_hrv1a, type="b2", B=FALSE, cutoff=0, 
-       col=c("#d73027", "#4575b4"), 
-       lwd=1);
-circos(R=080, cir=seg_data, W=40, mapping=circos_hrv14, type="b2", B=FALSE, cutoff=0, 
-       col=c("#d73027", "#4575b4"), 
-       lwd=1);
-circos(R=040, cir=seg_data, W=40, mapping=circos_pol1m, type="b2", B=FALSE, cutoff=0, 
-       col=c("#d73027", "#4575b4"), 
-       lwd=1)
+circos_order <- c("1. CVB3", "2. CVB1", "3. CVB4", "4. CVA9", "5. CVA24", "6. CVA21", "7. RV-A1", "8. RV-B14", "9. PV1")
+
+# remove plot margins
+par(mar = c(0, 0, 0, 0))
+# create an empty plot canvas of size 800x800
+plot(c(1, 800), c(1, 800), type = "n", axes = FALSE, xlab = "", ylab = "")
+# add a legend to the top-left corner of the plot
+legend(x = 20, y = 800, legend = circos_order, cex = 1.1, title = "", bty = "n")
+
+# set up the base layer of the circos plot 
+circos(R = 400, cir = seg_data, type = "chr", col = protein_colours, print.chr.lab = TRUE, W = 10, scale = FALSE)
+
+# add the remaining circle layers 
+purrr::pwalk(
+  .l = plot_params, # list of parameters: radius and mapping data
+  .f = function(radius, mapping_data, ...) {
+    circos(
+      R = radius,
+      mapping = mapping_data,
+      cir = seg_data,
+      W = 40,
+      type = "b2",
+      B = FALSE,
+      cutoff = 0,
+      col = c("#d73027", "#4575b4"),
+      lwd = 1)})
 ```
 
-![](02_figure_02A_circle_plot_with_nine_evs_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+![](02_figure_02A_circle_plot_with_nine_evs_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
 **Figure 2A**: Circular plot comparing the antigen landscapes for nine
 different EV genome polyproteins calculated using VirScan peptides for
@@ -201,6 +201,16 @@ CVA9, CVA24, CVA21, RV-A1, RV-B14, PV1. The 3D (RdRp) antigen hotspot in
 cases is preserved in all EV polyproteins, due to the conserved sequence
 of the RdRp. The hotspots in the VP1, however, vary between each
 polyprotein due to its variability across species.
+
+## Supplementary information :heavy_plus_sign:
+
+<details>
+
+<summary>
+
+<i> Visualising the antigen maps for nine EV polyproteins using a facet
+plot instead </i>
+</summary>
 
 Comparing Circos plot with a facet plot:
 
@@ -232,4 +242,6 @@ endia_nine_evs_ms %>%
     facet_wrap(~ ev_id, scales = "free")
 ```
 
-![](02_figure_02A_circle_plot_with_nine_evs_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
+![](02_figure_02A_circle_plot_with_nine_evs_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
+
+</details>

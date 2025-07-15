@@ -47,6 +47,10 @@ For each item below:
   maps](01_figure_01_CXVB_antigen_mapping.md)
   - Rmd file:
     [01_figure_01_CXVB_antigen_mapping.Rmd](01_figure_01_CXVB_antigen_mapping.Rmd)
+- [Figure 02A: Stratify by sex to show antigen landscape in different
+  sexes](02_figure_02A_circle_plot_with_nine_evs.md)
+  - Rmd file:
+    [02_figure_02A_circle_plot_with_nine_evs.Rmd](02_figure_02A_circle_plot_with_nine_evs.Rmd)
 - [Figure 02B: Stratify by sex to show antigen landscape in different
   sexes](02_figure_02B_sex_stratification.md)
   - Rmd file:

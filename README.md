@@ -52,9 +52,9 @@ For each item below:
   - Rmd file:
     [02_figure_02A_circle_plot_with_nine_evs.Rmd](02_figure_02A_circle_plot_with_nine_evs.Rmd)
 - [Figure 02B: Stratify by sex to show antigen landscape in different
-  sexes](02_figure_02B_sex_stratification.md)
+  sexes](03_figure_02B_sex_stratification.md)
   - Rmd file:
-    [02_figure_02B_sex_stratification.Rmd](02_figure_02B_sex_stratification.Rmd)
+    [03_figure_02B_sex_stratification.Rmd](03_figure_02B_sex_stratification.Rmd)
 - [Extended Data Fig 02 and 03: Detection of viral antigens in each
   cohort](05_genera_detected_w_antibody_levels.md)
   - Rmd file:

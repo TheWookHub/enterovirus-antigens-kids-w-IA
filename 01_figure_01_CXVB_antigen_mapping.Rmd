@@ -6,7 +6,7 @@ output: github_document
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, options(readr.show_col_types = FALSE))
 ```
 
-# Comparison of enterovirus antigen landscapes in children with islet autoimmnunity versus controls
+# Comparison of enterovirus antigen landscapes in children with islet autoimmunity versus controls
 
 ```{r}
 library(tidyverse)

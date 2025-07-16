@@ -1,5 +1,5 @@
 
-# Comparison of enterovirus antigen landscapes in children with islet autoimmnunity versus controls
+# Comparison of enterovirus antigen landscapes in children with islet autoimmunity versus controls
 
 ``` r
 library(tidyverse)

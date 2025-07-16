@@ -40,6 +40,8 @@ endia_avarda_onset <- avarda_1 %>%
   filter(sample_id %in% endia_virscan_onset$sample_id)
 ```
 
+### UpSet plot to show cross reactivity of EV peptides between classified *Enterovirus* species
+
 Obtain classified *Enterovirus* peptides
 
 ``` r
@@ -89,3 +91,45 @@ of peptides shared across all eight Enterovirus species. The black
 horizontal bars (left) indicate the total number of peptides assigned to
 each individual *Enterovirus* species. Only classified *Enterovirus*
 species were included.
+
+### Indistinguishability of species
+
+``` r
+endia_indis_plot <- endia_avarda_onset %>%
+  mutate(
+    indis_tag = ifelse(Indistinguishablity.Groups >= 1, 1, 0),
+    species = str_replace_all(species, "_", " ")) %>%
+  group_by(genus, species) %>%
+  summarise(indis_samples = sum(indis_tag), .groups = "drop") %>%
+  filter(indis_samples > 5) %>%
+  ggplot(aes(x = indis_samples, y = reorder(species, indis_samples))) +
+  geom_bar(aes(fill = genus), stat = "identity") +
+  scale_fill_manual(values = c("#1b9e77", "#d95f02", "#7570b3", "#e7298a", "#e6ab02")) +
+  ylab("Virus species") +
+  xlab("No. of samples") +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.background = element_rect(fill = "white", color = NA),  # White plot background
+    panel.background = element_rect(fill = "white", color = NA), # White panel background
+    axis.text.y = element_text(size = 10, color = "black"),
+    axis.text.x = element_text(size = 10, color = "black"),
+    axis.title = element_text(size = 12, face = "bold"),
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    legend.position = "bottom",
+    legend.title = element_text(size = 11, face = "bold"),
+    legend.text = element_text(size = 10, face = "italic"))
+
+endia_indis_plot
+```
+
+![](04_avarda_figures_cross_reactivity_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+
+**Extended Data Figure 5:** Viral species classified as
+indistinguishable by AVARDA in the ENDIA cohort. Bar plot depicting the
+number of ENDIA samples in which each viral species was classified as
+indistinguishable from another species by the AVARDA algorithm. Bars are
+ordered by number of samples and are colour-coded by viral genus.
+Species from the *Enterovirus* and *Mastadenovirus* genera were most
+frequently indistinguishable from others across the ENDIA cohort.

@@ -1,0 +1,127 @@
+---
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, options(readr.show_col_types = FALSE))
+```
+
+# Generate figures using the AVARDA output from the ENDIA cohort
+
+This replicates:
+
+- Extended Data Fig. 4 | Cross-reactivity of detected EV peptides by AVARDA
+- Extended Data Fig. 5 | Viral species classified as indistinguishable by AVARDA
+
+```{r}
+library(tidyverse)
+library(UpSetR)
+```
+
+Read in ENDIA VirScan with metadata dataset combined in `00_prepare_datasets.Rmd`
+and `filter` to only keep ENDIA onset samples (after seroconversion)
+```{r}
+endia_virscan_onset <- read_rds("cache/endia_virscan_metadata.rds") %>% 
+   filter(onset_visit == 1)
+```
+
+Read in and combine AVARDA results for ENDIA and only retain the onset samples
+```{r}
+avarda_1 <- read.csv("raw_data/avarda/phip11_plate1-3_v_kiwook_2_AVARDA_compiled_full_output.csv", header = TRUE)
+avarda_2 <- read.csv("raw_data/avarda/phip11_plate4-6_v_kiwook_2_AVARDA_compiled_full_output.csv", header = TRUE)
+
+endia_avarda_onset <- avarda_1 %>% 
+  bind_rows(avarda_2) %>% 
+  filter(!str_detect(name, "SAMPLE")) %>% #remove positive control
+  separate_wider_delim(name, delim = "_", names = c(NA, NA, NA, NA, NA, "col", "to", "merge", "too", "timepoint")) %>% 
+  unite(name, col:too) %>% 
+  unite(sample_id, name, timepoint, remove = FALSE) %>% 
+  mutate(genus = str_extract(Virus, "(?<=g__)[^.]+"),
+         species = str_match(Virus, ".*__(.*)$")[, 2]) %>% 
+  filter(sample_id %in% endia_virscan_onset$sample_id)
+
+```
+
+Obtain classified *Enterovirus* peptides 
+
+```{r}
+endia_onset_ev_peptides <- endia_avarda_onset %>% 
+  filter(genus == "Enterovirus") %>% 
+  unite(peptides, Evidence.Peptides, XR.peptides, sep = "|") %>%
+  separate_longer_delim(peptides, delim = "|") %>% 
+  filter(species != "Human_enterovirus")
+
+endia_ev_species_pep_list <- endia_onset_ev_peptides %>% 
+ group_by(species) %>% 
+    summarise(peptides = list(unique(peptides))) %>% 
+    deframe()
+```
+
+Plot the UpSet plot 
+
+```{r}
+upset(fromList(endia_ev_species_pep_list), order.by = "freq",
+      nsets = 8,
+      main.bar.color = "steelblue2",
+      queries = list(list(query = intersects, params = list("Rhinovirus_A",  "Rhinovirus_B","Enterovirus_B", "Enterovirus_C", "Enterovirus_D", 
+                                                            "Enterovirus_A", "Enterovirus_H", "Rhinovirus_C"), color = "violetred3", active = TRUE),
+                     list(query = intersects, params = list("Rhinovirus_A",  "Rhinovirus_B","Enterovirus_B", "Enterovirus_C", "Enterovirus_D", 
+                                                            "Enterovirus_A"), color = "tomato", active = TRUE),
+                     list(query = intersects, params = list("Rhinovirus_A",  "Rhinovirus_B","Enterovirus_B", "Enterovirus_C", "Enterovirus_D", 
+                                                            "Enterovirus_A", "Rhinovirus_C"), color = "darkolivegreen3", active = TRUE)))
+```
+
+
+### Snippets
+
+I noticed that in the `Evidence.Peptides` and `XR.peptides` columns there are rows with peptide digits preceded by underscores and UniProt IDs (e.g. P08318_22):
+
+```{r}
+# find all rows with peptides that have an underscore in their name
+endia_avarda_onset %>% filter(str_count(Evidence.Peptides, pattern =  "_") > 0) %>% 
+  select(Evidence.Peptides, XR.peptides)
+```
+
+If we use `separate_rows()` on either of these columns then new rows will be created separated both by `|` and `_`. However, my concern was that some peptide digits may be shared between UniProt ID, which may correspond to different peptides/species/genera. E.g., the peptide digit `27` is associated with 2 different UniProt IDs corresponding to 2 different genera:
+
+```{r}
+endia_avarda_onset %>% filter(str_detect(Evidence.Peptides, "Q71MJ4_27")) %>% pull(genus)
+```
+
+```{r}
+endia_avarda_onset %>% filter(str_detect(Evidence.Peptides, "P08318_27")) %>% pull(genus) %>% unique()
+```
+
+To find these non unique peptide digits, I wrote the following function:
+
+```{r}
+find_non_unique_peptide_digits <- function(df, pep_id_col) {
+  
+  df %>%
+      separate_longer_delim(cols = {{ pep_id_col }}, delim = "|") %>%
+    # filter to keep only the items that match our 'ID_digit' pattern.
+    # the pattern looks for one or more letters/numbers, an underscore, and one or more digits.
+    filter(str_detect({{ pep_id_col }}, pattern = "^[A-Z0-9]+_\\d+$")) %>%
+    # extract ID and digit into new columns
+     separate_wider_regex(
+      cols = {{ pep_id_col }},
+      patterns = c(ID = "[A-Z0-9]+", "_", peptide_digit = "\\d+")) %>%
+    # group by and summarise results using reframe for multiple rows
+    group_by(peptide_digit) %>%
+    reframe(
+      unique_id_count = n_distinct(ID),
+      associated_ids = paste(unique(ID), collapse = ", "),
+      species = paste(unique(species), collapse = ", ")) %>%
+    # keep only non-unique peptide digits
+    filter(unique_id_count > 1) %>%
+    arrange(desc(unique_id_count))
+}
+```
+
+```{r}
+find_non_unique_peptide_digits(endia_avarda_onset, Evidence.Peptides)
+
+find_non_unique_peptide_digits(endia_avarda_onset, XR.peptides)
+```
+
+Therefore we should use `separate_longer_delim(peptide_column, delim = "|")` so we do not mistake equal peptide digits for the same peptides

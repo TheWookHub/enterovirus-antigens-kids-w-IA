@@ -102,7 +102,7 @@ write_rds(vigr_ms, "cache/vigr_ms.rds")
 ```
 
 
-## Comparison of antigen landscape per case
+## Comparison of antigen landscape per cohort
 
 ### Enterovirus polyprotein plot
 

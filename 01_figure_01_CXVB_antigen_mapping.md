@@ -91,7 +91,7 @@ vigr_ms_plot <- vigr_ms %>%
   ggtitle("VIGR")
 ```
 
-## Comparison of antigen landscape per case
+## Comparison of antigen landscape per cohort
 
 ### Enterovirus polyprotein plot
 

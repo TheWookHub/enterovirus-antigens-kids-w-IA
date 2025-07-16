@@ -1,5 +1,5 @@
 
-# Generate figures using the AVARDA output from the ENDIA cohort
+# Generate figures using the AVARDA output from the ENDIA cohort examining cross reactivity and indistinguishable viruses
 
 This replicates:
 
@@ -47,7 +47,8 @@ endia_onset_ev_peptides <- endia_avarda_onset %>%
   filter(genus == "Enterovirus") %>% 
   unite(peptides, Evidence.Peptides, XR.peptides, sep = "|") %>%
   separate_longer_delim(peptides, delim = "|") %>% 
-  filter(species != "Human_enterovirus")
+  filter(species != "Human_enterovirus") %>% 
+  mutate(species = str_replace_all(species, "_", " "))
 
 endia_ev_species_pep_list <- endia_onset_ev_peptides %>% 
  group_by(species) %>% 
@@ -58,18 +59,34 @@ endia_ev_species_pep_list <- endia_onset_ev_peptides %>%
 Plot the UpSet plot
 
 ``` r
-upset(fromList(endia_ev_species_pep_list), order.by = "freq",
-      nsets = 8,
-      main.bar.color = "steelblue2",
-      queries = list(list(query = intersects, params = list("Rhinovirus_A",  "Rhinovirus_B","Enterovirus_B", "Enterovirus_C", "Enterovirus_D", 
-                                                            "Enterovirus_A", "Enterovirus_H", "Rhinovirus_C"), color = "violetred3", active = TRUE),
-                     list(query = intersects, params = list("Rhinovirus_A",  "Rhinovirus_B","Enterovirus_B", "Enterovirus_C", "Enterovirus_D", 
-                                                            "Enterovirus_A"), color = "tomato", active = TRUE),
-                     list(query = intersects, params = list("Rhinovirus_A",  "Rhinovirus_B","Enterovirus_B", "Enterovirus_C", "Enterovirus_D", 
-                                                            "Enterovirus_A", "Rhinovirus_C"), color = "darkolivegreen3", active = TRUE)))
+upset(
+  fromList(endia_ev_species_pep_list),
+  order.by = "freq",
+  nsets = 8,
+  main.bar.color = "#0072B2",
+  sets.x.label = "No. peptides per species",
+  mainbar.y.label = "Shared VirScan peptides",
+  queries = list(
+    list(
+      query = intersects,
+      params = list("Rhinovirus A", "Rhinovirus B", "Enterovirus B", "Enterovirus C", 
+                    "Enterovirus D", "Enterovirus A", "Enterovirus H", "Rhinovirus C"),
+      color = "#CC79A7",
+      active = TRUE )))
 ```
 
 ![](04_avarda_figures_cross_reactivity_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
+
+**Extended Data Figure 4:** Cross-reactivity of detected EV peptides by
+AVARDA UpSet plot illustrating all *Enterovirus* genus peptides detected
+in the ENDIA dataset after being processed using the AVARDA algorithm,
+and their assignment to specific viral species. Each vertical bar (top)
+represents the total number of *Enterovirus* peptides shared by each
+species, ordered by decreasing count. The pink bar highlights the number
+of peptides shared across all eight Enterovirus species. The black
+horizontal bars (left) indicate the total number of peptides assigned to
+each individual *Enterovirus* species. Only classified *Enterovirus*
+species were included.
 
 ### Snippets
 

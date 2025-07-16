@@ -59,7 +59,7 @@ endia_ev_species_pep_list <- endia_onset_ev_peptides %>%
 Plot the UpSet plot
 
 ``` r
-upset(
+endia_ev_upset_plot <- upset(
   fromList(endia_ev_species_pep_list),
   order.by = "freq",
   nsets = 8,
@@ -73,6 +73,8 @@ upset(
                     "Enterovirus D", "Enterovirus A", "Enterovirus H", "Rhinovirus C"),
       color = "#CC79A7",
       active = TRUE )))
+
+endia_ev_upset_plot
 ```
 
 ![](04_avarda_figures_cross_reactivity_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->

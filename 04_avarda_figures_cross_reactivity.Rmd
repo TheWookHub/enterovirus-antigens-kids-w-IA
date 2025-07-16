@@ -60,8 +60,8 @@ endia_ev_species_pep_list <- endia_onset_ev_peptides %>%
 
 Plot the UpSet plot 
 
-```{r}
-upset(
+```{r, fig.height=7, fig.width=8}
+endia_ev_upset_plot <- upset(
   fromList(endia_ev_species_pep_list),
   order.by = "freq",
   nsets = 8,
@@ -75,11 +75,18 @@ upset(
                     "Enterovirus D", "Enterovirus A", "Enterovirus H", "Rhinovirus C"),
       color = "#CC79A7",
       active = TRUE )))
+
+endia_ev_upset_plot
 ```
 
 **Extended Data Figure 4:** Cross-reactivity of detected EV peptides by AVARDA
 UpSet plot illustrating all *Enterovirus* genus peptides detected in the ENDIA dataset after being processed using the AVARDA algorithm, and their assignment to specific viral species. Each vertical bar (top) represents the total number of *Enterovirus* peptides shared by each species, ordered by decreasing count. The pink bar highlights the number of peptides shared across all eight Enterovirus species. The black horizontal bars (left) indicate the total number of peptides assigned to each individual *Enterovirus* species. Only classified *Enterovirus* species were included.
 
+```{r, echo = FALSE, eval = FALSE}
+pdf("figures/endia_ev_upset_plot.pdf")
+endia_ev_upset_plot
+dev.off()
+```
 
 ### Snippets
 

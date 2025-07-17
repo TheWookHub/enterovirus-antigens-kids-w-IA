@@ -55,6 +55,11 @@ For each item below:
   sexes](03_figure_02B_sex_stratification.md)
   - Rmd file:
     [03_figure_02B_sex_stratification.Rmd](03_figure_02B_sex_stratification.Rmd)
+- [Extended Data Fig 04 and 05: AVARDA output figures showing cross
+  reactivity and indistinguishable
+  viruses](04_avarda_figures_cross_reactivity.md)
+  - Rmd file:
+    [04_avarda_figures_cross_reactivity.Rmd](04_avarda_figures_cross_reactivity.Rmd)
 - [Extended Data Fig 02 and 03: Detection of viral antigens in each
   cohort](05_genera_detected_w_antibody_levels.md)
   - Rmd file:

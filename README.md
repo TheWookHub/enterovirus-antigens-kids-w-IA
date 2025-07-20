@@ -3,9 +3,8 @@
 
 This repository contains the code that was used in the analyses for the
 manuscript “Distinct enterovirus antigen landscape in children with
-islet autoimmunity”, submitted to *Nature Medicine* as a *Brief
-Communications* article on 10 Jul 2025 with the Manuscript number
-NMED-BC143454.
+islet autoimmunity”, submitted as an article to *Nature Communications*
+on 17 Jul 2025 with the Manuscript number NCOMMS-25-55437-T.
 
 This manuscript examines antigens identified by VirScan in two
 paediatric cohorts, Viruses In the Genetically at Risk (VIGR) and

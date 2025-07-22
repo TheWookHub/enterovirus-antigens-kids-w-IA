@@ -1,5 +1,5 @@
 
-# Generate Multiple Sequence Alignments (MSA) of VP1 and 3D regions to nine *Enterovirus* species
+# Generate Multiple Sequence Alignments (MSAs) of VP1 and 3D regions of nine *Enterovirus* species
 
 ``` r
 library(tidyverse)

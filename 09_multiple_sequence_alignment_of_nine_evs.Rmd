@@ -6,7 +6,7 @@ output: github_document
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, options(readr.show_col_types = FALSE))
 ```
 
-# Generate Multiple Sequence Alignments (MSA) of VP1 and 3D regions to nine *Enterovirus* species 
+# Generate Multiple Sequence Alignments (MSAs) of VP1 and 3D regions of nine *Enterovirus* species 
 
 ```{r}
 library(tidyverse)

@@ -73,3 +73,8 @@ For each item below:
 - [Extended Data Table 3 and 4: GLMM results for 3D and VP1 motif
   enrichment for each cohort](08_GLMMs_on_EV_motifs.md)
   - Rmd file: [08_GLMMs_on_EV_motifs.Rmd](08_GLMMs_on_EV_motifs.Rmd)
+- [Extended Data Figure 6 and Figure 2B: Multiple sequence alignment for
+  the 3D and VP1 regions across nine
+  enteroviruses](09_multiple_sequence_alignment_of_nine_evs.md)
+  - Rmd file:
+    [09_multiple_sequence_alignment_of_nine_evs.Rmd](09_multiple_sequence_alignment_of_nine_evs.Rmd)

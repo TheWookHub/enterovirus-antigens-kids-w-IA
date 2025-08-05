@@ -57,6 +57,7 @@ endia_metadata <- readxl::read_xlsx("raw_data/metadata/finalweights_teddy_plasma
          condition = ifelse(case == 1, "Case", "Control")) %>% 
   unite(sample_id, c(participant_id, recorded_visit), sep = "_", remove = FALSE) %>% 
   distinct(sample_id, .keep_all = TRUE) %>% # remove duplicate sample IDs from the NCC methodology
+  filter(type == "Infant") %>%  # only keep infant data
   group_by(participant_id) %>% # remove controls that seroconverted to cases
   filter(!(all(c("Case", "Control") %in% condition) & condition == "Control")) %>% 
   ungroup()

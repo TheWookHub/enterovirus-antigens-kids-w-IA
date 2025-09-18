@@ -100,4 +100,4 @@ cohorts_sex_plot_same_yaxis_stacked <- wrap_elements(cohorts_sex_plot_same_y) +
     plot.tag.position = "left")
 ```
 
-![](02_figure_02B_sex_stratification_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+![](03_figure_02B_sex_stratification_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->

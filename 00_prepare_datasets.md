@@ -53,8 +53,10 @@ endia_metadata <- readxl::read_xlsx("raw_data/metadata/finalweights_teddy_plasma
   mutate(recorded_visit = str_replace(recorded_visit, "(?<=[BVT])0", ""), # replace 0 preceded by B, V or T
          condition = ifelse(case == 1, "Case", "Control")) %>% 
   unite(sample_id, c(participant_id, recorded_visit), sep = "_", remove = FALSE) %>% 
-  distinct(sample_id, .keep_all = TRUE) %>% # remove duplicate sample IDs from the NCC methodology
-  filter(type == "Infant") %>%  # only keep infant data
+  distinct(sample_id, .keep_all = TRUE)  %>% # remove duplicate sample IDs from the NCC methodology
+  filter(type == "Infant")  # only keep infant data
+   
+endia_metadata_wo_controls_that_seroconverted <- endia_metadata %>% 
   group_by(participant_id) %>% # remove controls that seroconverted to cases
   filter(!(all(c("Case", "Control") %in% condition) & condition == "Control")) %>% 
   ungroup()
@@ -62,9 +64,14 @@ endia_metadata <- readxl::read_xlsx("raw_data/metadata/finalweights_teddy_plasma
   #3.
 
 endia_virscan_metadata <- endia_virscan_long %>% 
+  left_join(endia_metadata_wo_controls_that_seroconverted, by = join_by(sample_id, participant_id)) 
+
+endia_virscan_metadata_w_controls_that_seroconverted <- endia_virscan_long %>% 
   left_join(endia_metadata, by = join_by(sample_id, participant_id)) 
 
 write_rds(endia_virscan_metadata, "cache/endia_virscan_metadata.rds")
+# export additional dataset which keeps the controls that seroconverted to cases - for sensitivity analysis
+write_rds(endia_virscan_metadata_w_controls_that_seroconverted, "cache/endia_virscan_metadata_w_extra_ctrls.rds")
 
 }
 ```

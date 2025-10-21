@@ -135,42 +135,84 @@ gtsave(tidy_models_data_table, "figures/glm_results_vigr_endia_onset.png")
 
 
 <details>
-  <summary><i> Abundance as outcome instead of case status </i></summary>
+  <summary><i> Comparing ENDIA models with and without two control samples that seroconverted to cases </i></summary>
 
-### Enterovirus genus only for both ENDIA and VIGR
-
-**ENDIA** 
+Redoing the IA as outcome model for ENDIA including 2 control samples which were previously removed as these controls converted to cases
 
 ```{r}
-endia_ev_model_w_abundance <- glmmTMB(formula = total_abundance ~ Condition + infant_HLA + age_sample_collection_month + infant_sex + maternal_T1D + (1|deidentified_nest_id_new) + (1|mother_id),
+endia_onset_w_extra_controls_for_ev_stats <- read_rds("cache/endia_virscan_metadata_w_extra_ctrls.rds") %>% 
+  filter(onset_visit == 1) %>% 
+  group_by(sample_id) %>% 
+  mutate(rpk = abundance / sum(abundance) * 100000) %>% 
+  mutate(log_lib = log(sum(abundance) + 1e-8)) %>% 
+  ungroup() %>% 
+  filter(taxon_genus == "Enterovirus") %>% 
+  group_by(sample_id, taxon_genus) %>% 
+  mutate(total_rpk = sum(rpk),
+         total_abundance = sum(abundance)) %>% 
+  ungroup() %>% 
+  distinct(taxon_genus, sample_id, .keep_all = TRUE) %>% 
+  mutate(across(c(infant_HLA, infant_id, mother_id, maternal_T1D, deidentified_nest_id_new, infant_sex), as.factor),
+        age_sample_collection_month = age_at_sample_collection_days / 365 * 12,
+        log_total_rpk = log(total_rpk + 1))
+
+endia_ev_model_poisson_w_extra_ctrls <- glmmTMB(formula = case ~ log_total_rpk + infant_HLA + age_sample_collection_month + infant_sex + maternal_T1D + (1|deidentified_nest_id_new) + (1|mother_id),
        family = poisson(link = "log"),
         weights = weightTEDDY,
-       offset = log_lib,
-       data = endia_ev_for_stats)
+       data = endia_onset_w_extra_controls_for_ev_stats)
 
-endia_ev_model_w_abundance %>% summary()
 
-endia_ev_model_w_abundance %>% 
-  broom.mixed::tidy(effects = "fixed", conf.int = TRUE, exponentiate = TRUE) %>% 
-  select(term, estimate, p.value, conf.low, conf.high) %>% 
-  mutate(significant = ifelse(p.value <= 0.10, T, F))
+endia_ev_model_poisson_w_extra_ctrls_tidy <- endia_ev_model_poisson_w_extra_ctrls %>%
+    broom.mixed::tidy(effect = "fixed", conf.int = TRUE, exponentiate = TRUE) %>% 
+    add_column(cohort = "ENDIA_w_ctrls")
+
+tidy_models_data_endia <- rbind(endia_ev_model_poisson_tidy, endia_ev_model_poisson_w_extra_ctrls_tidy) %>% 
+    dplyr::rename(RR = estimate,
+               `CI lower` = conf.low,
+               `CI upper` = conf.high) %>% 
+    select(term, RR, `CI lower`, `CI upper`, p.value, cohort)
 ```
 
-**VIGR**
+GLM models output for the ENDIA tables comparing original ENDIA model and ENDIA model which includes the two control samples previously removed as these samples seroconverted. No significant changes are observed.
 
-```{r}
-vigr_ev_model_w_abundance <- glmmTMB(total_abundance ~ Condition + HLA_Status + Age + Sex + Diabetes + (1|Nest) + (1|My_name),
-                                family = poisson(link = "log"),
-                                offset = log_lib,
-                                data = vigr_ev_for_stats) 
+```{r, echo = FALSE}
+tidy_models_endia_data_table <- tidy_models_data_endia %>%
+  mutate(term = case_match(term, !!!c("log_total_rpk" ~ "log(EV)"), .default = term)) %>% 
+  select(-cohort) %>% 
+  gt(rowname_col = "term") %>%
+  tab_header(
+    title = "Summary of GLM model tests"
+  ) %>%
+  cols_label(
+    term = "Predictor",
+    RR = "RR",
+    `CI lower` = "CI Lower",
+    `CI upper` = "CI Upper",
+    p.value = "Pr(>|z|)"
+  ) %>%
+  fmt_number(
+    columns = c(RR, `CI lower`, `CI upper`, p.value),
+    decimals = 3
+  ) %>%
+  cols_align(
+    align = "left",
+    columns = everything()
+  ) %>% 
+  tab_row_group(
+    label = "ENDIA",
+    rows = 1:8
+  ) %>% 
+  tab_row_group(
+    label = "ENDIA with extra two controls",
+    rows = 9:16
+  ) %>% 
+  tab_style(
+    style = cell_fill(color = "lightgrey"),
+    locations = cells_row_groups(groups = c("ENDIA", "ENDIA with extra two controls"))
+  )
 
-vigr_ev_model_w_abundance %>% summary()
+as_raw_html(tidy_models_endia_data_table)
 
-vigr_ev_model_w_abundance %>% 
- broom.mixed::tidy(effects = "fixed", conf.int = TRUE, exponentiate = TRUE) %>% 
- select(term, estimate, p.value, conf.low, conf.high)
+gtsave(tidy_models_endia_data_table, "figures/glm_results_endia_endia_w_ctrls.png")
 ```
-
-
-
 

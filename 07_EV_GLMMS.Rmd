@@ -32,7 +32,8 @@ endia_for_stats <- endia_virscan_onset %>%
         age_sample_collection_month = age_at_sample_collection_days / 365 * 12,
         age_c = scale(age_at_sample_collection_days),
         log_total_rpk = log(total_rpk + 1),
-        Condition = factor(condition, levels = c("Control", "Case"), labels = c("Control", "Case")))
+        Condition = factor(condition, levels = c("Control", "Case"), labels = c("Control", "Case")),
+        infant_HLA = fct_relevel(infant_HLA, "DRXX"))
 ```
 
 ```{r}
@@ -69,7 +70,7 @@ vigr_for_stats <- vigr_virscan_metadata %>%
 
 vigr_ev_for_stats <- vigr_for_stats %>% filter(taxon_genus == "Enterovirus")
 
-vigr_ev_model_poisson <- glmmTMB(case ~ log_total_rpk + HLA_Status + Age + Sex + maternal_T1D + (1|Nest) + (1|My_name),
+vigr_ev_model_poisson <- glmmTMB(case ~ log_total_rpk + HLA_Status + Age + Sex + maternal_T1D + (1|Nest),
                                 family = poisson(link = "log"),
                                 data = vigr_ev_for_stats)
 
@@ -154,7 +155,8 @@ endia_onset_w_extra_controls_for_ev_stats <- read_rds("cache/endia_virscan_metad
   distinct(taxon_genus, sample_id, .keep_all = TRUE) %>% 
   mutate(across(c(infant_HLA, infant_id, mother_id, maternal_T1D, deidentified_nest_id_new, infant_sex), as.factor),
         age_sample_collection_month = age_at_sample_collection_days / 365 * 12,
-        log_total_rpk = log(total_rpk + 1))
+        log_total_rpk = log(total_rpk + 1),
+        infant_HLA = fct_relevel(infant_HLA, "DRXX"))
 
 endia_ev_model_poisson_w_extra_ctrls <- glmmTMB(formula = case ~ log_total_rpk + infant_HLA + age_sample_collection_month + infant_sex + maternal_T1D + (1|deidentified_nest_id_new) + (1|mother_id),
        family = poisson(link = "log"),

@@ -13,6 +13,8 @@ library(tidyverse)
 source("scripts/read_blast.R")
 library(glmmTMB)
 library(gt)
+library(patchwork)
+source("scripts/drop_unused_factor_levels.R")
 ```
 
 Read in data prepared in `00_prepare_datasets.Rmd` 
@@ -144,20 +146,23 @@ endia_motif_for_stats <- endia_motif_results %>%
   mutate(total_rpk = sum(rpk),
          total_abundance = sum(abundance)) %>% 
   ungroup() %>% 
-  select(saccver, sample_id, case, condition, taxon_genus, total_rpk, infant_id, mother_id, 
+  select(saccver, participant_id, sample_id, case, condition, taxon_genus, total_rpk, infant_id, mother_id, 
          deidentified_nest_id_new, age_at_sample_collection_days, infant_sex,
          infant_HLA, weightTEDDY, maternal_T1D, total_abundance, log_lib) %>% 
   distinct(saccver, taxon_genus, sample_id, .keep_all = TRUE) %>% 
   mutate(age_sample_collection_month = age_at_sample_collection_days / 365 * 12) %>% 
   mutate(log_total_rpk = log(total_rpk + 1)) %>% 
-  mutate(across(c(infant_HLA, maternal_T1D, infant_id, mother_id, deidentified_nest_id_new, infant_sex), as.factor)) %>% 
-  mutate(Condition = factor(condition, levels = c("Control", "Case"), labels = c("Control", "Case")))
+  mutate(across(c(infant_HLA, maternal_T1D, mother_id, deidentified_nest_id_new, infant_sex), as.factor)) %>% 
+  mutate(Condition = factor(condition, levels = c("Control", "Case"), labels = c("Control", "Case"))) %>% 
+  mutate(infant_HLA = fct_relevel(infant_HLA, "DRXX"))
 ```
 
 #### ENDIA 3D region 
 
 ```{r}
-endia_3d_motif_for_stats <- endia_motif_for_stats %>% filter(saccver == "3D_motif")
+endia_3d_motif_for_stats <- endia_motif_for_stats %>% 
+  filter(saccver == "3D_motif") %>% 
+  drop_unused_factor_levels()
 
 endia_3d_model <- glmmTMB(formula = case ~ log_total_rpk + infant_HLA + age_sample_collection_month + infant_sex + maternal_T1D + (1|deidentified_nest_id_new) + (1|mother_id),
        family = poisson(link = "log"),
@@ -169,11 +174,18 @@ endia_3d_model %>% tidy_looksie()
 
 ##### 3D stratified by sex 
 
-No significance in abundances but HLA is significant in females 
+For the motif analyses, we had to remove the two control samples that seroconverted to cases (from 99 to 97 control samples), as if we kept these samples in, we had to include `infant_id` as random effect to account for that participant having multiple samples. However, likely due to the reduced dataset, the motif models were unable to deal with this extra layer of complexity and could not converge.
+
+Results show no significance in abundances but HLA DR34 is significant in females 
 
 ```{r}
-endia_3d_motif_for_stats_xy <- endia_3d_motif_for_stats %>% filter(infant_sex == "Male")
-endia_3d_motif_for_stats_xx <- endia_3d_motif_for_stats %>% filter(infant_sex == "Female")
+endia_3d_motif_for_stats_xy <- endia_3d_motif_for_stats %>% 
+  filter(infant_sex == "Male") %>% 
+  drop_unused_factor_levels() 
+
+endia_3d_motif_for_stats_xx <- endia_3d_motif_for_stats %>%
+  filter(infant_sex == "Female") %>% 
+  drop_unused_factor_levels() 
 
 endia_3d_model_xy <- glmmTMB(formula = case ~ log_total_rpk + infant_HLA + age_sample_collection_month + maternal_T1D + (1|deidentified_nest_id_new) + (1|mother_id),
        family = poisson(link = "log"),
@@ -185,30 +197,73 @@ endia_3d_model_xx <- glmmTMB(formula = case ~ log_total_rpk + infant_HLA + age_s
         weights = weightTEDDY,
        data = endia_3d_motif_for_stats_xx)
 
-endia_3d_model_xx %>% tidy_looksie()
-
 endia_3d_model_xy %>% tidy_looksie()
+
+endia_3d_model_xx %>% tidy_looksie()
 ```
 
-3D does not appear to be a good predictor for IA. However, there is enrichment of 3D in cases 
+3D does not appear to be a good predictor for IA. However, as observed in [Figure 1](https://github.com/TheWookHub/enterovirus-antigens-kids-w-IA/blob/main/01_figure_01_CXVB_antigen_mapping_files/figure-gfm/unnamed-chunk-11-1.png), 3D appears enriched in cases, consistent in both cohorts and [both sexes](https://github.com/TheWookHub/enterovirus-antigens-kids-w-IA/blob/main/03_figure_02B_sex_stratification_files/figure-gfm/unnamed-chunk-7-1.png)
 
-This enrichment appears in a statistical test too:
+Therefore, a statistical test was performed with the total counts for the 3D motif as outcome variable.
+
+The distribution of the total counts for the 3D region in ENDIA. Could fit a negative binomial or poisson
 
 ```{r}
-endia_3d_abundance_as_outcome <- glmmTMB(formula = total_abundance ~ Condition + infant_HLA + age_sample_collection_month + infant_sex + maternal_T1D + offset(log_lib) + (1|deidentified_nest_id_new) + (1|mother_id),
+endia_3d_total_counts_distribution_plot <- endia_3d_motif_for_stats %>% 
+  ggplot(aes(x = total_abundance)) +
+  geom_histogram(bins = 40, fill = "black") +
+  theme_minimal() +
+  labs(x = "Total counts", y = "Frequency")
+
+endia_3d_total_counts_distribution_plot
+```
+
+Distribution could be poisson (with zero inf) or neg binom. 
+All three tested with anova and NB came out best.
+
+```{r}
+endia_3d_abundance_as_outcome_orig_poisson <- glmmTMB(formula = total_abundance ~ Condition + infant_HLA + age_sample_collection_month + infant_sex + maternal_T1D + offset(log_lib) + (1|deidentified_nest_id_new) + (1|mother_id),
        family = poisson(link = "log"),
         weights = weightTEDDY,
        data = endia_3d_motif_for_stats) 
 
-endia_3d_abundance_as_outcome %>% tidy_looksie()
+endia_3d_abundance_as_outcome_poisson_with_zero <- glmmTMB(formula = total_abundance ~ Condition + infant_HLA + age_sample_collection_month + infant_sex + maternal_T1D + offset(log_lib) + (1|deidentified_nest_id_new) + (1|mother_id),
+       family = poisson(link = "log"),
+        weights = weightTEDDY,
+       zi = ~1,
+       control = glmmTMBControl(optimizer = optim, optArgs = list(method = "BFGS")),
+       data = endia_3d_motif_for_stats) 
+
+library(performance)
+
+check_overdispersion(endia_3d_abundance_as_outcome_orig_poisson)
+
+endia_3d_abundance_as_outcome_nb <- glmmTMB(formula = total_abundance ~ Condition + infant_HLA + age_sample_collection_month + infant_sex + maternal_T1D + offset(log_lib) + (1|deidentified_nest_id_new) + (1|mother_id),
+       family = nbinom1(link = "log"),
+        weights = weightTEDDY,
+       data = endia_3d_motif_for_stats)
+
+anova(endia_3d_abundance_as_outcome_orig_poisson,
+      endia_3d_abundance_as_outcome_poisson_with_zero,
+      endia_3d_abundance_as_outcome_nb)
+```
+
+This enrichment appears in a statistical test too:
+
+```{r}
+endia_3d_abundance_as_outcome <- endia_3d_abundance_as_outcome_nb 
+
+endia_3d_abundance_as_outcome %>% summary()
 ```
 
 #### VP1 
 
-No significance in abundance but HLA is significant 
+No significance in log_total_rpk but HLA DR34 is significant 
 
 ```{r}
-endia_vp1_motif_for_stats <- endia_motif_for_stats %>% filter(saccver == "VP1_motif")
+endia_vp1_motif_for_stats <- endia_motif_for_stats %>% 
+  filter(saccver == "VP1_motif") %>% 
+  drop_unused_factor_levels()
 
 endia_vp1_model <- glmmTMB(formula = case ~ log_total_rpk + infant_HLA + age_sample_collection_month + infant_sex + maternal_T1D + (1|deidentified_nest_id_new) + (1|mother_id),
        family = poisson(link = "log"),
@@ -220,8 +275,8 @@ endia_vp1_model %>% tidy_looksie()
 
 ##### VP1 stratified by sex ENDIA
 
-Stratifying by sex results in significant difference in abundance for males, but not for females. 
-However, HLA is significant in females, but not for males.
+Stratifying by sex results in significant difference in abundance (`log_total_rpk`) for males, but not for females. 
+However, HLA DR34 is significant in females, but not for males, similar to the 3D results stratified by sex.
 
 Number of males and females per case or control group:
 ```{r}
@@ -231,8 +286,13 @@ endia_vp1_motif_for_stats %>%
 ```
 
 ```{r}
-endia_vp1_motif_for_stats_xy <- endia_vp1_motif_for_stats %>% filter(infant_sex == "Male")
-endia_vp1_motif_for_stats_xx <- endia_vp1_motif_for_stats %>% filter(infant_sex == "Female")
+endia_vp1_motif_for_stats_xy <- endia_vp1_motif_for_stats %>% 
+  filter(infant_sex == "Male") %>% 
+  drop_unused_factor_levels()
+
+endia_vp1_motif_for_stats_xx <- endia_vp1_motif_for_stats %>%
+  filter(infant_sex == "Female") %>% 
+  drop_unused_factor_levels()
 
 endia_vp1_xy_model <- glmmTMB(formula = case ~ log_total_rpk + infant_HLA + age_sample_collection_month + maternal_T1D +  (1|deidentified_nest_id_new) + (1|mother_id),
        family = poisson(link = "log"),
@@ -306,6 +366,7 @@ vigr_motif_for_stats <- vigr_motif_results %>%
   mutate(total_rpk = sum(rpk),
          total_abundance = sum(abundance)) %>% 
   ungroup() %>% 
+  mutate(maternal_T1D = ifelse(maternal_T1D == "T1D", 1, 0)) %>% # encode to match ENDIA
   select(saccver, Condition, total_rpk, sample_id, taxon_genus, 
          Nest, Age, Sex, HLA_Status, My_name, total_abundance, log_lib, maternal_T1D) %>% 
  distinct(saccver, taxon_genus, sample_id, .keep_all = TRUE) %>% 
@@ -325,9 +386,11 @@ vigr_motif_for_stats %>%
 #### VIGR 3D region
 
 ```{r}
-vigr_3d_motif_for_stats <- vigr_motif_for_stats %>% filter(saccver == "3D_motif")
+vigr_3d_motif_for_stats <- vigr_motif_for_stats %>% 
+  filter(saccver == "3D_motif") %>% 
+  drop_unused_factor_levels()
 
-vigr_3d_model <- glmmTMB(formula = case ~ log_total_rpk + HLA_Status + Age + Sex + maternal_T1D + (1|Nest) + (1|My_name),
+vigr_3d_model <- glmmTMB(formula = case ~ log_total_rpk + HLA_Status + Age + Sex + maternal_T1D + (1|Nest),
        family = poisson(link = "log"),
        data = vigr_3d_motif_for_stats)
 
@@ -335,10 +398,19 @@ vigr_3d_model %>% tidy_looksie()
 ```
 
 ```{r}
-vigr_3d_abundance_as_outcome <- glmmTMB(formula = total_abundance ~ Condition + HLA_Status + Age + Sex + maternal_T1D + offset(log_lib) + (1|Nest) + (1|My_name),
-       family = poisson(link = "log"),
-       data = vigr_3d_motif_for_stats)  
+vigr_3d_total_counts_distribution_plot <- vigr_3d_motif_for_stats %>% 
+  ggplot(aes(x = total_abundance)) +
+  geom_histogram(bins = 40, fill = "black") +
+  theme_minimal() +
+  labs(x = "Total counts", y = "Frequency")
 
+vigr_3d_total_counts_distribution_plot
+```
+
+```{r}
+vigr_3d_abundance_as_outcome <- glmmTMB(formula = total_abundance ~ Condition + HLA_Status + Age + Sex + maternal_T1D + offset(log_lib) + (1|Nest),
+       family = nbinom1(link = "log"),
+       data = vigr_3d_motif_for_stats)  
 
 vigr_3d_abundance_as_outcome %>% tidy_looksie()
 ```
@@ -346,9 +418,11 @@ vigr_3d_abundance_as_outcome %>% tidy_looksie()
 #### VIGR VP1 region
 
 ```{r}
-vigr_vp1_motif_for_stats <- vigr_motif_for_stats %>% filter(saccver == "VP1_motif")
+vigr_vp1_motif_for_stats <- vigr_motif_for_stats %>% 
+  filter(saccver == "VP1_motif") %>% 
+  drop_unused_factor_levels()
 
-vigr_vp1_model <- glmmTMB(formula = case ~ log_total_rpk + HLA_Status + Age + Sex + maternal_T1D + (1|Nest) + (1|My_name),
+vigr_vp1_model <- glmmTMB(formula = case ~ log_total_rpk + HLA_Status + Age + Sex + maternal_T1D + (1|Nest),
        family = poisson(link = "log"),
        data = vigr_vp1_motif_for_stats)
 
@@ -359,9 +433,11 @@ vigr_vp1_model %>% tidy_looksie()
 
 Females VP1 motif
 ```{r}
-vigr_vp1_motif_for_stats_xx <- vigr_vp1_motif_for_stats %>% filter(Sex == "F")
+vigr_vp1_motif_for_stats_xx <- vigr_vp1_motif_for_stats %>% 
+  filter(Sex == "F") %>% 
+  drop_unused_factor_levels()
 
-vigr_vp1_xx_model <- glmmTMB(formula = case ~ log_total_rpk + HLA_Status + Age + maternal_T1D + (1|Nest) + (1|My_name),
+vigr_vp1_xx_model <- glmmTMB(formula = case ~ log_total_rpk + HLA_Status + Age + maternal_T1D + (1|Nest),
        family = poisson(link = "log"),
        data = vigr_vp1_motif_for_stats_xx)
 
@@ -371,9 +447,11 @@ vigr_vp1_xx_model %>% tidy_looksie()
 Males VP1 motif
 
 ```{r}
-vigr_vp1_motif_for_stats_xy <- vigr_vp1_motif_for_stats %>% filter(Sex == "M")
+vigr_vp1_motif_for_stats_xy <- vigr_vp1_motif_for_stats %>% 
+  filter(Sex == "M") %>% 
+  drop_unused_factor_levels()
 
-vigr_vp1_xy_model <- glmmTMB(formula = case ~ log_total_rpk + HLA_Status + Age + maternal_T1D + (1|Nest) + (1|My_name),
+vigr_vp1_xy_model <- glmmTMB(formula = case ~ log_total_rpk + HLA_Status + Age + maternal_T1D + (1|Nest),
        family = poisson(link = "log"),
        data = vigr_vp1_motif_for_stats_xy)
 
@@ -625,3 +703,20 @@ as_raw_html(vigr_3d_model_tidy_models_tidy_table)
 ```{r, echo = FALSE}
 gtsave(vigr_3d_model_tidy_models_tidy_table, "figures/vigr_3d_model_tidy_models_tidy_table.png")
 ```
+
+#### Histogram of 3D total counts for the antibody levels as outcome models
+
+A = ENDIA
+B = VIGR
+
+```{r}
+endia_3d_total_counts_distribution_plot + 
+  (vigr_3d_total_counts_distribution_plot + 
+     theme(axis.title.y = element_blank())) + 
+  plot_annotation(tag_levels = "A")
+```
+
+```{r, echo = FALSE}
+ggsave("figures/3d_distribution.jpg", dpi = 300, width = 7, height = 4)
+```
+

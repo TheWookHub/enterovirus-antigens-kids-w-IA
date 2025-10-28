@@ -15,7 +15,7 @@ library(gt)
 ```
 
 ```{r}
-endia_virscan_onset <- read_rds("cache/endia_virscan_metadata.rds") %>% 
+endia_virscan_onset <- read_rds("cache/endia_virscan_metadata_w_extra_ctrls.rds") %>% 
   filter(onset_visit == 1) %>% 
   group_by(sample_id) %>% 
   mutate(rpk = abundance / sum(abundance) * 100000) %>% 
@@ -64,6 +64,7 @@ vigr_for_stats <- vigr_virscan_metadata %>%
   ungroup() %>% 
   distinct(taxon_genus, sample_id, .keep_all = TRUE) %>% 
   mutate(case = ifelse(Condition == "Case", 1, 0),
+        maternal_T1D = ifelse(maternal_T1D == "T1D", 1, 0),
         log_total_rpk = log(total_rpk + 1),
         across(c(HLA_Status, Sex, Nest, maternal_T1D, My_name), as.factor)) %>% 
   mutate(Condition = factor(Condition, levels = c("Control", "Case"), labels = c("Control", "Case")))
@@ -133,88 +134,3 @@ as_raw_html(tidy_models_data_table)
 ```{r, echo = FALSE}
 gtsave(tidy_models_data_table, "figures/glm_results_vigr_endia_onset.png")
 ```
-
-
-<details>
-  <summary><i> Comparing ENDIA models with and without two control samples that seroconverted to cases </i></summary>
-
-Redoing the IA as outcome model for ENDIA including 2 control samples which were previously removed as these controls converted to cases
-
-```{r}
-endia_onset_w_extra_controls_for_ev_stats <- read_rds("cache/endia_virscan_metadata_w_extra_ctrls.rds") %>% 
-  filter(onset_visit == 1) %>% 
-  group_by(sample_id) %>% 
-  mutate(rpk = abundance / sum(abundance) * 100000) %>% 
-  mutate(log_lib = log(sum(abundance) + 1e-8)) %>% 
-  ungroup() %>% 
-  filter(taxon_genus == "Enterovirus") %>% 
-  group_by(sample_id, taxon_genus) %>% 
-  mutate(total_rpk = sum(rpk),
-         total_abundance = sum(abundance)) %>% 
-  ungroup() %>% 
-  distinct(taxon_genus, sample_id, .keep_all = TRUE) %>% 
-  mutate(across(c(infant_HLA, infant_id, mother_id, maternal_T1D, deidentified_nest_id_new, infant_sex), as.factor),
-        age_sample_collection_month = age_at_sample_collection_days / 365 * 12,
-        log_total_rpk = log(total_rpk + 1),
-        infant_HLA = fct_relevel(infant_HLA, "DRXX"))
-
-endia_ev_model_poisson_w_extra_ctrls <- glmmTMB(formula = case ~ log_total_rpk + infant_HLA + age_sample_collection_month + infant_sex + maternal_T1D + (1|deidentified_nest_id_new) + (1|mother_id),
-       family = poisson(link = "log"),
-        weights = weightTEDDY,
-       data = endia_onset_w_extra_controls_for_ev_stats)
-
-
-endia_ev_model_poisson_w_extra_ctrls_tidy <- endia_ev_model_poisson_w_extra_ctrls %>%
-    broom.mixed::tidy(effect = "fixed", conf.int = TRUE, exponentiate = TRUE) %>% 
-    add_column(cohort = "ENDIA_w_ctrls")
-
-tidy_models_data_endia <- rbind(endia_ev_model_poisson_tidy, endia_ev_model_poisson_w_extra_ctrls_tidy) %>% 
-    dplyr::rename(RR = estimate,
-               `CI lower` = conf.low,
-               `CI upper` = conf.high) %>% 
-    select(term, RR, `CI lower`, `CI upper`, p.value, cohort)
-```
-
-GLM models output for the ENDIA tables comparing original ENDIA model and ENDIA model which includes the two control samples previously removed as these samples seroconverted. No significant changes are observed.
-
-```{r, echo = FALSE}
-tidy_models_endia_data_table <- tidy_models_data_endia %>%
-  mutate(term = case_match(term, !!!c("log_total_rpk" ~ "log(EV)"), .default = term)) %>% 
-  select(-cohort) %>% 
-  gt(rowname_col = "term") %>%
-  tab_header(
-    title = "Summary of GLM model tests"
-  ) %>%
-  cols_label(
-    term = "Predictor",
-    RR = "RR",
-    `CI lower` = "CI Lower",
-    `CI upper` = "CI Upper",
-    p.value = "Pr(>|z|)"
-  ) %>%
-  fmt_number(
-    columns = c(RR, `CI lower`, `CI upper`, p.value),
-    decimals = 3
-  ) %>%
-  cols_align(
-    align = "left",
-    columns = everything()
-  ) %>% 
-  tab_row_group(
-    label = "ENDIA",
-    rows = 1:8
-  ) %>% 
-  tab_row_group(
-    label = "ENDIA with extra two controls",
-    rows = 9:16
-  ) %>% 
-  tab_style(
-    style = cell_fill(color = "lightgrey"),
-    locations = cells_row_groups(groups = c("ENDIA", "ENDIA with extra two controls"))
-  )
-
-as_raw_html(tidy_models_endia_data_table)
-
-gtsave(tidy_models_endia_data_table, "figures/glm_results_endia_endia_w_ctrls.png")
-```
-

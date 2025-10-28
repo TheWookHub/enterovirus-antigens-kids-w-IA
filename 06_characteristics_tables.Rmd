@@ -101,7 +101,7 @@ gtsave(vigr_demographic_table, "figures/vigr_demographic_table.png")
 **ENDIA** 
 
 ```{r}
-endia_virscan_onset <- read_rds("cache/endia_virscan_metadata.rds") %>% 
+endia_virscan_onset <- read_rds("cache/endia_virscan_metadata_w_extra_ctrls.rds") %>% 
   filter(onset_visit == 1)
 
 endia_metadata_onset_trimmed <- endia_virscan_onset %>% 
@@ -151,13 +151,21 @@ endia_age_summary_years <- endia_virscan_onset %>%
   select(Characteristic, Case, Control)
 ```
 
+Show number of unique samples in both classes 
+
+```{r}
+endia_virscan_onset %>% 
+  group_by(condition) %>% 
+  summarise(unique_samples = n_distinct(sample_id))
+```
+
 ```{r, echo = FALSE}
 endia_demographic_table <- endia_table_data %>%
   gt() %>%
   tab_header(title = "Demographic and genetic characteristics of ENDIA samples") %>%
   cols_label(
     Case = html("Case (n = 44)"),
-    Control = html("Control (n = 97)")
+    Control = html("Control (n = 99)")
   ) %>%
   tab_style(
     style = cell_text(weight = "bold"),

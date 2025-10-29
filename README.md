@@ -78,3 +78,6 @@ For each item below:
   enteroviruses](09_multiple_sequence_alignment_of_nine_evs.md)
   - Rmd file:
     [09_multiple_sequence_alignment_of_nine_evs.Rmd](09_multiple_sequence_alignment_of_nine_evs.Rmd)
+- [Extended Data Table 5: Power analyses on both
+  cohorts](10_power_calculations.md)
+  - Rmd file: [10_power_calculations.Rmd](10_power_calculations.Rmd)

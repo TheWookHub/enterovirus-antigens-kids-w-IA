@@ -1,5 +1,5 @@
 
-## Power calculations
+# Power re-calculations to determine the minimum odds ratios that can be estimated from different sample sizes
 
 ``` r
 library(epiR)
@@ -7,17 +7,15 @@ library(tidyverse)
 library(pander)
 ```
 
-# Power re-calculations to determine odds ratios that can be estimated from different sample sizes
-
 ## Power calculations for ENDIA
 
 As described in [Oakey et
 al. 2023](https://doi.org/10.1080/07853890.2023.2198255), power
 calculations were done based on the NCC design of 50 case children and
 150 matched (by sex and age) controls assuming a type I error of 0.05,
-power of 0.8 and a two-sided test and varying probabilities between
-control children (p0) and correlation between matched controls and cases
-(phi) [Oakey et
+power of 0.8 and a two-sided test and varying baseline probabilities
+between control children (p0) and correlation between matched controls
+and cases (phi) [Oakey et
 al. 2023](https://doi.org/10.1080/07853890.2023.2198255), supp info,
 page 2.
 
@@ -32,78 +30,75 @@ To address these discrepancies, we have calculated the power of our
 study following the same approach as described in the original ENDIA NCC
 paper.
 
-### Calculations for a total of 143 samples
-
 ``` r
-# Assumptions, obtained from Table A3
-p0_vals <- c(0.01, 0.05, 0.1, 0.2, 0.3) 
+# assumptions obtained from Table A3 in Oakey et al. Supp info
+p0_vals <- c(0.01, 0.05, 0.1, 0.2, 0.3)
 phi_vals <- c(0, 0.1, 0.2, 0.3)
 
-# Function to calculate minimum detectable OR
-min_detectable_or_matched <- function(p0, phi.coef, alpha = 0.05, power = 0.8, 
+# function to calculate minimum detectable OR
+
+min_detectable_or_matched <- function(p0, phi.coef, alpha = 0.05, power = 0.8,
                                       n_cases = 44, n_controls = 99) {
   total_n <- n_cases + n_controls
   ratio <- n_controls / n_cases
 
-  for (or in seq(1.01, 20, by = 0.01)) {
-    result <- epi.sscc(
-      OR = or,
+  tibble(or = seq(1.01, 20, by = 0.01)) %>%
+    mutate(result = map(or, ~ epi.sscc(
+      OR = .x,
       p0 = p0,
       n = total_n,
       power = NA,
       r = ratio,
       phi.coef = phi.coef,
       conf.level = 1 - alpha,
-      method = "matched"
-    )
-    if (!is.null(result$OR) && result$power >= power) {
-      return(round(min(result$OR), 2)) # Choose minimum value
-    }
-  }
-  return(NA)
+      method = "matched"))) %>%
+    filter(map_lgl(result, ~ !is.null(.x$OR) && .x$power >= power)) %>%
+    {
+      if (nrow(.) == 0) { # return NA if no ORs meet the power threshold
+        tibble(min_OR = NA_real_)
+      } else {
+        summarise(., min_OR = round(min(map_dbl(result, "OR")), 2))
+      }
+    } %>%
+    pull(min_OR)
 }
+```
 
-# Generate all combinations
-params <- expand.grid(p0 = p0_vals, phi = phi_vals)
+### Calculations for a total of 143 samples for ENDIA
 
-# Compute minimum detectable ORs
-results_143 <- params %>%
-  rowwise() %>%
-  mutate(min_OR = min_detectable_or_matched(p0, phi)) %>%
-  ungroup()
+``` r
+# loop through all combinations and compute minimum detectable ORs
+min_detect_OR_143 <- crossing(p0 = p0_vals, phi = phi_vals) %>% 
+  mutate(min_OR = pmap_dbl(
+    list(p0, phi),
+    ~ min_detectable_or_matched(..1, ..2, n_cases = 44, n_controls = 99)))
 
-# Results table
-results_143 %>%
-  as_tibble() %>%
-  pivot_wider(names_from = phi, values_from = min_OR) %>% 
-  rename_with(~ paste0("phi = ", .x)) %>%
+# reshape and display results
+min_detect_OR_143 %>%
+  pivot_wider(names_from = phi, values_from = min_OR, names_prefix = "phi = ") %>%
   pander(round = 2, caption = "Minimum Detectable OR by p0 and phi")
 ```
 
-| phi = p0 | phi = 0 | phi = 0.1 | phi = 0.2 | phi = 0.3 |
-|:--------:|:-------:|:---------:|:---------:|:---------:|
-|   0.01   |  11.36  |   12.13   |   13.03   |   14.06   |
-|   0.05   |  4.78   |   5.08    |   5.45    |   5.91    |
-|   0.1    |  3.64   |   3.84    |   4.09    |   4.41    |
-|   0.2    |    3    |   3.14    |   3.32    |   3.57    |
-|   0.3    |  2.83   |   2.95    |   3.12    |   3.34    |
+|  p0  | phi = 0 | phi = 0.1 | phi = 0.2 | phi = 0.3 |
+|:----:|:-------:|:---------:|:---------:|:---------:|
+| 0.01 |  11.36  |   12.13   |   13.03   |   14.06   |
+| 0.05 |  4.78   |   5.08    |   5.45    |   5.91    |
+| 0.1  |  3.64   |   3.84    |   4.09    |   4.41    |
+| 0.2  |    3    |   3.14    |   3.32    |   3.57    |
+| 0.3  |  2.83   |   2.95    |   3.12    |   3.34    |
 
 Minimum Detectable OR by p0 and phi
 
-### Calculations for 141 samples
+### Calculations for 141 samples for ENDIA
 
 ``` r
-# Generate all combinations
-params <- expand.grid(p0 = p0_vals, phi = phi_vals)
+min_detect_OR_141 <- crossing(p0 = p0_vals, phi = phi_vals) %>% 
+  mutate(min_OR = pmap_dbl(
+    list(p0, phi),
+    ~ min_detectable_or_matched(..1, ..2, n_cases = 44, n_controls = 97)))
 
-# Compute minimum detectable ORs
-results_141 <- params %>%
-  rowwise() %>%
-  mutate(min_OR = min_detectable_or_matched(p0, phi, n_cases = 44, n_controls = 97)) %>%
-  ungroup()
-
-# Results table
-results_141 %>%
+# reshape and display results
+min_detect_OR_141 %>%
   as_tibble() %>%
   pivot_wider(names_from = phi, values_from = min_OR) %>% 
   rename_with(~ paste0("phi = ", .x)) %>%
@@ -120,7 +115,7 @@ results_141 %>%
 
 Minimum Detectable OR by p0 and phi
 
-The minimum detectable OR in both cases is around 2.83.
+The minimum detectable OR for both 143 and 141 samples is around 2.83.
 
 ## Power calculations for VIGR
 
@@ -128,17 +123,13 @@ Following the same principles, we will calculate the power of the VIGR
 dataset (n = 42, cases = 21, controls = 21)
 
 ``` r
-# Generate all combinations
-params <- expand.grid(p0 = p0_vals, phi = phi_vals)
+min_detect_OR_vigr <- crossing(p0 = p0_vals, phi = phi_vals) %>% 
+  mutate(min_OR = pmap_dbl(
+    list(p0, phi),
+    ~ min_detectable_or_matched(..1, ..2, n_cases = 21, n_controls = 21)))
 
-# Compute minimum detectable ORs
-results_vigr <- params %>%
-  rowwise() %>%
-  mutate(min_OR = min_detectable_or_matched(p0, phi, n_cases = 21, n_controls = 21)) %>%
-  ungroup()
-
-# Optional: show in a neat format
-results_vigr %>%
+# reshape and display results
+min_detect_OR_vigr %>%
   as_tibble() %>%
   pivot_wider(names_from = phi, values_from = min_OR) %>% 
   rename_with(~ paste0("phi = ", .x)) %>%
@@ -155,5 +146,17 @@ results_vigr %>%
 
 Minimum Detectable OR by p0 and phi
 
-For VIGR, the minimum detectable OR is 6.20 with 80% power, which
-indicates that VIGR is underpowered compared to ENDIA.
+For VIGR, the minimum detectable OR is 6.20 with 80% power, when the
+baseline exposure probability is 30% (p0 = 0.3) and the matching
+correlation phi is 0 (no dependence in exposure between matched cases
+and controls). This indicates that VIGR is underpowered compared to
+ENDIA as VIGR has 80% power to detect an odds ratio **only if it is 6.20
+or greater**. If the true OR were smaller, it would be statistically
+underpowered (true OR needs to be \> minimum ).
+
+Note that when the exposure is 0.01 (p0 = 0.01), which is very low
+exposure prevalence (only ~1% controls are expected to be exposed, so if
+we have 21 controls, that’s ~0.21 people, very close to 0 exposed
+people) we get `NA` values for phi because it cannot detect anything
+with this sample size (because the OR does not meet the power
+requirement)

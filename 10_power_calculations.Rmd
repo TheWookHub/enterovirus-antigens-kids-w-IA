@@ -12,6 +12,7 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, options(rea
 library(epiR)
 library(tidyverse)
 library(pander)
+library(gt)
 ```
 
 ## Power calculations for ENDIA
@@ -108,9 +109,89 @@ min_detect_OR_vigr %>%
   pander(round = 2, caption = "Minimum Detectable OR by p0 and phi")
 ```
 
-For VIGR, the minimum detectable OR is 6.20 with 80% power, when the baseline exposure probability is 30% (p0 = 0.3) and the matching correlation phi is 0 (no dependence in exposure between matched cases and controls). This indicates that VIGR is underpowered compared to ENDIA as VIGR has 80% power to detect an odds ratio **only if it is 6.20 or greater**. If the true OR were smaller, it would be statistically underpowered (true OR needs to be > minimum ). 
+For VIGR, the minimum detectable OR is 6.20 with 80% power, when the baseline exposure probability is 30% (p0 = 0.3) and the matching correlation phi is 0 (no dependence in exposure between matched cases and controls). This indicates that VIGR is underpowered compared to ENDIA as VIGR has 80% power to detect an odds ratio **only if it is 6.20 or greater**.
 
 Note that when the exposure is 0.01 (p0 = 0.01), which is very low exposure prevalence (only ~1% controls are expected to be exposed, so if we have 21 controls, that's ~0.21 people, very close to 0 exposed people) we get `NA` values for phi because it cannot detect anything with this sample size (because the OR does not meet the power requirement) 
  
+### Combined table with power calculation results for ENDIA with n = 143 and n = 141 and for VIGR (n = 42) for paper
 
+**Supplementary Table 5:** Power calculations on the ENDIA, using both 143 samples (44 cases and 99 controls) and 141 samples (44 cases and 97 controls), and VIGR (21 cases and 21 controls) datasets. Minimum detectable odds ratios (ORs) were computed using the epi.sscc() function from the epiR v2.0.86 R package, iterating over OR values from 1.01 to 20, by increments of 0.01. The smallest OR achieving 80% power for each combination of p0 and phi was retained. The row containing the lowest p0 values is highlighted in yellow, where phi = 0.
+
+```{r, echo = FALSE}
+library(tidyverse)
+library(gt)
+
+# add dataset labels
+min_detect_OR_143_labeled <- min_detect_OR_143 %>%
+  mutate(dataset = "ENDIA_143")
+
+min_detect_OR_141_labeled <- min_detect_OR_141 %>%
+  mutate(dataset = "ENDIA_141")
+
+min_detect_OR_vigr_labeled <- min_detect_OR_vigr %>%
+  mutate(dataset = "VIGR")
+
+# combine all into one long table
+combined_results <- bind_rows(
+  min_detect_OR_143_labeled,
+  min_detect_OR_141_labeled,
+  min_detect_OR_vigr_labeled
+)
+
+# pivot wider so each dataset is a column
+wide_results <- combined_results %>%
+  pivot_wider(
+    names_from = dataset,
+    values_from = min_OR
+  )
+
+power_calc_table_pretty <- wide_results %>%
+  mutate(
+    phi = paste0("ϕ: ", phi),
+    p0 = paste0("p\u2080: ", p0) # unicode for subscript 0
+  ) %>%
+  arrange(p0, phi) %>%
+  mutate(across(where(is.numeric), ~ round(.x, 2))) %>%
+  gt(rowname_col = "p0", groupname_col = "phi") %>%
+  tab_header(
+    title = "Minimum detectable OR by p₀, ϕ, and dataset",
+    subtitle = "80% power, α = 0.05"
+  ) %>%
+  cols_label(
+  ENDIA_143 = html("ENDIA<br>(n = 143)"),
+  ENDIA_141 = html("ENDIA<br>(n = 141)"),
+  VIGR = html("VIGR<br>(n = 42)")
+) %>%
+  tab_style(
+    style = list(
+      cell_fill(color = "yellow"),
+      cell_text(weight = "bold")
+    ),
+    locations = cells_body(
+      rows = phi == "ϕ: 0" & p0 == "p₀: 0.3"
+    )
+  ) %>%
+  tab_style(
+    list(
+      cell_fill(color = "grey"),
+      cell_text(weight = "bold")
+   ),
+    locations = cells_row_groups()
+  ) %>%
+  tab_style(
+    style = list(
+      cell_fill(color = "yellow"),
+      cell_text(weight = "bold")
+    ),
+    locations = cells_stub(
+      rows = phi == "ϕ: 0" & p0 == "p₀: 0.3"
+    )
+  )
+
+as_raw_html(power_calc_table_pretty)
+```
+
+```{r, echo = FALSE}
+gtsave(power_calc_table_pretty, "figures/power_calc_table_table.png")
+```
 

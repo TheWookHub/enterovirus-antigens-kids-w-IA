@@ -704,7 +704,7 @@ as_raw_html(vigr_3d_model_tidy_models_tidy_table)
 gtsave(vigr_3d_model_tidy_models_tidy_table, "figures/vigr_3d_model_tidy_models_tidy_table.png")
 ```
 
-#### Histogram of 3D total counts for the antibody levels as outcome models
+#### Histogram of 3D motif total counts for the antibody levels as outcome models
 
 A = ENDIA
 B = VIGR
@@ -717,6 +717,6 @@ endia_3d_total_counts_distribution_plot +
 ```
 
 ```{r, echo = FALSE}
-ggsave("figures/3d_distribution.jpg", dpi = 300, width = 7, height = 4)
+ggsave("figures/3d_motif_distribution.jpg", dpi = 300, width = 7, height = 4)
 ```
 

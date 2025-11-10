@@ -458,7 +458,7 @@ vigr_vp1_xy_model <- glmmTMB(formula = case ~ log_total_rpk + HLA_Status + Age +
 vigr_vp1_xy_model %>% tidy_looksie()
 ```
 
-### Generating pretty tables with the `gt` package from the GLM model results
+### Generating pretty tables with the `gt` package from the GLM model results for the paper
 
 #### VP1 Sex stratified 
 
@@ -720,3 +720,4 @@ endia_3d_total_counts_distribution_plot +
 ggsave("figures/3d_motif_distribution.jpg", dpi = 300, width = 7, height = 4)
 ```
 
+**Supplementary Fig. 7:** Histogram showing the distribution of the total counts for the 3D motif in ENDIA (A) and VIGR (B).  Total counts represent the non-normalised total antibody counts assigned to the 3D region of the Enterovirus genome polyprotein.

@@ -50,7 +50,7 @@ For each item below:
 -   [Supplementary Table 02: GLMM results for antibody response to *Enterovirus* for each cohort ](07_EV_GLMMS.md)
     + Rmd file: [07_EV_GLMMS.Rmd](07_EV_GLMMS.Rmd)
     
--   [Supplementary Table 03 and 04: GLMM results for 3D and VP1 motif enrichment for each cohort ](08_GLMMs_on_EV_motifs.md)
+-   [Supplementary Table 03 and 04 and Supplementary Fig. 7: GLMM results for 3D and VP1 motif enrichment for each cohort ](08_GLMMs_on_EV_motifs.md)
     + Rmd file: [08_GLMMs_on_EV_motifs.Rmd](08_GLMMs_on_EV_motifs.Rmd)
     
 -   [Supplementary Fig 06 and Fig 02B: Multiple sequence alignment for the 3D and VP1 regions across nine enteroviruses ](09_multiple_sequence_alignment_of_nine_evs.md)

@@ -3,10 +3,10 @@
 
 This replicates:
 
-- Extended Data Fig. 4 \| Cross-reactivity of detected EV peptides by
+- Supplementary Fig. 4 \| Cross-reactivity of detected EV peptides by
   AVARDA
-- Extended Data Fig. 5 \| Viral species classified as indistinguishable
-  by AVARDA
+- Supplementary Data Fig. 5 \| Viral species classified as
+  indistinguishable by AVARDA
 
 ``` r
 library(tidyverse)
@@ -81,7 +81,7 @@ endia_ev_upset_plot
 
 ![](04_avarda_figures_cross_reactivity_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
 
-**Extended Data Figure 4:** Cross-reactivity of detected EV peptides by
+**Supplementary Fig. 4:** Cross-reactivity of detected EV peptides by
 AVARDA UpSet plot illustrating all *Enterovirus* genus peptides detected
 in the ENDIA dataset after being processed using the AVARDA algorithm,
 and their assignment to specific viral species. Each vertical bar (top)
@@ -120,10 +120,10 @@ endia_indis_plot
 
 ![](04_avarda_figures_cross_reactivity_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
 
-**Extended Data Figure 5:** Viral species classified as
-indistinguishable by AVARDA in the ENDIA cohort. Bar plot depicting the
-number of ENDIA samples in which each viral species was classified as
-indistinguishable from another species by the AVARDA algorithm. Bars are
-ordered by number of samples and are colour-coded by viral genus.
-Species from the *Enterovirus* and *Mastadenovirus* genera were most
-frequently indistinguishable from others across the ENDIA cohort.
+**Supplementary Fig. 5:** Viral species classified as indistinguishable
+by AVARDA in the ENDIA cohort. Bar plot depicting the number of ENDIA
+samples in which each viral species was classified as indistinguishable
+from another species by the AVARDA algorithm. Bars are ordered by number
+of samples and are colour-coded by viral genus. Species from the
+*Enterovirus* and *Mastadenovirus* genera were most frequently
+indistinguishable from others across the ENDIA cohort.

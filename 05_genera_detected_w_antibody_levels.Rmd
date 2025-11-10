@@ -16,13 +16,11 @@ library(patchwork)
 ## ENDIA
 
 ```{r}
-endia_virscan_metadata <- read_rds("cache/endia_virscan_metadata.rds") %>% 
+endia_virscan_onset <- read_rds("cache/endia_virscan_metadata_w_extra_ctrls.rds") %>% 
+  filter(onset_visit == 1) %>% 
   group_by(sample_id) %>% 
   mutate(rpk = abundance / sum(abundance) * 100000) %>% 
-  ungroup()
-
-endia_virscan_onset <- endia_virscan_metadata %>%
-  filter(onset_visit == 1) %>% 
+  ungroup() %>% 
   drop_na(taxon_genus) 
 ```
 
@@ -136,16 +134,17 @@ endia_combined_rpk_and_samples_genera_plot <- endia_prop_samples_per_genus_plot_
   theme(plot.margin = margin(0, 0, 0, 0),
         panel.grid.minor.x = element_blank(),
         panel.grid.major.x = element_blank(),
-        panel.grid.major.y = element_blank()) 
+        panel.grid.major.y = element_blank()) &
+  plot_annotation(tag_levels = "A")
 
-endia_combined_rpk_and_samples_genera_plot + plot_annotation(tag_levels = "A")
+endia_combined_rpk_and_samples_genera_plot
 ```
 
 **Figure S03.1:** Detection of viral antigens corresponding to 72 genera in the ENDIA cohort, stratified by case (n = 44) and control (n = 97) groups. (A) Proportion of samples in which antigens were detected. Numbers adjacent to each bar indicate the number of samples contributing to the respective proportion. (B) $\log_{10}$-transformed mean normalised read counts, expressed as reads per thousand (RPK), for each genus in case and control groups.
 
 ```{r, echo = FALSE}
 ggsave("figures/endia_combined_rpk_and_samples_genera_plot.png", endia_combined_rpk_and_samples_genera_plot, width = 15, height = 10)
-ggsave("figures/endia_combined_rpk_and_samples_genera_plot.svg", endia_combined_rpk_and_samples_genera_plot, width = 15, height = 10)
+ggsave("figures/endia_combined_rpk_and_samples_genera_plot.svg", endia_combined_rpk_and_samples_genera_plot, width = 15, height = 10, dpi = 320)
 ```
 
 ## VIGR
@@ -265,14 +264,15 @@ vigr_combined_rpk_and_samples_genera_plot <- vigr_prop_samples_per_genus_plot_cl
   theme(plot.margin = margin(0, 1, 0, 0),
         panel.grid.minor.x = element_blank(),
         panel.grid.major.x = element_blank(),
-        panel.grid.major.y = element_blank()) 
+        panel.grid.major.y = element_blank()) &
+  plot_annotation(tag_levels = "A")
 
-vigr_combined_rpk_and_samples_genera_plot +  plot_annotation(tag_levels = "A")
+vigr_combined_rpk_and_samples_genera_plot 
 ```
 
 **Figure S03.2:** Detection of viral antigens corresponding to 74 genera in the VIGR cohort, stratified by case (n = 21) and control (n = 21) groups. (A) Proportion of samples in which antigens were detected. Numbers adjacent to each bar indicate the number of samples contributing to the respective proportion. (B) $\log_{10}$-transformed mean normalised read counts, expressed as reads per thousand (RPK), for each genus in case and control groups.
 
 ```{r, echo = FALSE}
-ggsave("figures/vigr_combined_rpk_and_samples_genera_plot.png", vigr_combined_rpk_and_samples_genera_plot, width = 15, height = 10)
-ggsave("figures/vigr_combined_rpk_and_samples_genera_plot.svg", vigr_combined_rpk_and_samples_genera_plot, width = 15, height = 10)
+ggsave("figures/vigr_combined_rpk_and_samples_genera_plot.png", vigr_combined_rpk_and_samples_genera_plot, width = 15, height = 12)
+ggsave("figures/vigr_combined_rpk_and_samples_genera_plot.svg", vigr_combined_rpk_and_samples_genera_plot, width = 15, height = 12, dpi = 320)
 ```

@@ -9,13 +9,11 @@ library(patchwork)
 ## ENDIA
 
 ``` r
-endia_virscan_metadata <- read_rds("cache/endia_virscan_metadata.rds") %>% 
+endia_virscan_onset <- read_rds("cache/endia_virscan_metadata_w_extra_ctrls.rds") %>% 
+  filter(onset_visit == 1) %>% 
   group_by(sample_id) %>% 
   mutate(rpk = abundance / sum(abundance) * 100000) %>% 
-  ungroup()
-
-endia_virscan_onset <- endia_virscan_metadata %>%
-  filter(onset_visit == 1) %>% 
+  ungroup() %>% 
   drop_na(taxon_genus) 
 ```
 
@@ -126,9 +124,10 @@ endia_combined_rpk_and_samples_genera_plot <- endia_prop_samples_per_genus_plot_
   theme(plot.margin = margin(0, 0, 0, 0),
         panel.grid.minor.x = element_blank(),
         panel.grid.major.x = element_blank(),
-        panel.grid.major.y = element_blank()) 
+        panel.grid.major.y = element_blank()) &
+  plot_annotation(tag_levels = "A")
 
-endia_combined_rpk_and_samples_genera_plot + plot_annotation(tag_levels = "A")
+endia_combined_rpk_and_samples_genera_plot
 ```
 
 ![](05_genera_detected_w_antibody_levels_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
@@ -216,9 +215,10 @@ vigr_combined_rpk_and_samples_genera_plot <- vigr_prop_samples_per_genus_plot_cl
   theme(plot.margin = margin(0, 1, 0, 0),
         panel.grid.minor.x = element_blank(),
         panel.grid.major.x = element_blank(),
-        panel.grid.major.y = element_blank()) 
+        panel.grid.major.y = element_blank()) &
+  plot_annotation(tag_levels = "A")
 
-vigr_combined_rpk_and_samples_genera_plot +  plot_annotation(tag_levels = "A")
+vigr_combined_rpk_and_samples_genera_plot 
 ```
 
 ![](05_genera_detected_w_antibody_levels_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->

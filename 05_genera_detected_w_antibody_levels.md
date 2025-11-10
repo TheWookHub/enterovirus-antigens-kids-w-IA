@@ -132,13 +132,13 @@ endia_combined_rpk_and_samples_genera_plot
 
 ![](05_genera_detected_w_antibody_levels_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
 
-**Figure S03.1:** Detection of viral antigens corresponding to 72 genera
-in the ENDIA cohort, stratified by case (n = 44) and control (n = 97)
-groups. (A) Proportion of samples in which antigens were detected.
-Numbers adjacent to each bar indicate the number of samples contributing
-to the respective proportion. (B) $\log_{10}$-transformed mean
-normalised read counts, expressed as reads per thousand (RPK), for each
-genus in case and control groups.
+**Supplementary Fig. 2:** Detection of viral antigens corresponding to
+72 genera in the ENDIA cohort, stratified by case (n = 44) and control
+(n = 99) groups. (A) Proportion of samples in which antigens were
+detected. Numbers adjacent to each bar indicate the number of samples
+contributing to the respective proportion. (B) $\log_{10}$-transformed
+mean normalised read counts, expressed as reads per thousand (RPK), for
+each genus in case and control groups.
 
 ## VIGR
 
@@ -223,9 +223,9 @@ vigr_combined_rpk_and_samples_genera_plot
 
 ![](05_genera_detected_w_antibody_levels_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
 
-**Figure S03.2:** Detection of viral antigens corresponding to 74 genera
-in the VIGR cohort, stratified by case (n = 21) and control (n = 21)
-groups. (A) Proportion of samples in which antigens were detected.
+**Supplementary Fig. 3:** Detection of viral antigens corresponding to
+74 genera in the VIGR cohort, stratified by case (n = 21) and control (n
+= 21) groups. (A) Proportion of samples in which antigens were detected.
 Numbers adjacent to each bar indicate the number of samples contributing
 to the respective proportion. (B) $\log_{10}$-transformed mean
 normalised read counts, expressed as reads per thousand (RPK), for each

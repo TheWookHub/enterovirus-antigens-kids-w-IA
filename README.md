@@ -54,30 +54,30 @@ For each item below:
   sexes](03_figure_02B_sex_stratification.md)
   - Rmd file:
     [03_figure_02B_sex_stratification.Rmd](03_figure_02B_sex_stratification.Rmd)
-- [Extended Data Fig 04 and 05: AVARDA output figures showing cross
+- [Supplementary Fig 04 and 05: AVARDA output figures showing cross
   reactivity and indistinguishable
   viruses](04_avarda_figures_cross_reactivity.md)
   - Rmd file:
     [04_avarda_figures_cross_reactivity.Rmd](04_avarda_figures_cross_reactivity.Rmd)
-- [Extended Data Fig 02 and 03: Detection of viral antigens in each
+- [Supplementary Fig 02 and 03: Detection of viral antigens in each
   cohort](05_genera_detected_w_antibody_levels.md)
   - Rmd file:
     [05_genera_detected_w_antibody_levels.Rmd](05_genera_detected_w_antibody_levels.Rmd)
-- [Extended Data Table 1: Demographic and genetic characteristics tables
-  for each cohort](06_characteristics_tables.md)
+- [Supplementary Table 01: Demographic and genetic characteristics
+  tables for each cohort](06_characteristics_tables.md)
   - Rmd file:
     [06_characteristics_tables.Rmd](06_characteristics_tables.Rmd)
-- [Extended Data Table 2: GLMM results for antibody response to
+- [Supplementary Table 02: GLMM results for antibody response to
   *Enterovirus* for each cohort](07_EV_GLMMS.md)
   - Rmd file: [07_EV_GLMMS.Rmd](07_EV_GLMMS.Rmd)
-- [Extended Data Table 3 and 4: GLMM results for 3D and VP1 motif
+- [Supplementary Table 03 and 04: GLMM results for 3D and VP1 motif
   enrichment for each cohort](08_GLMMs_on_EV_motifs.md)
   - Rmd file: [08_GLMMs_on_EV_motifs.Rmd](08_GLMMs_on_EV_motifs.Rmd)
-- [Extended Data Figure 6 and Figure 2B: Multiple sequence alignment for
-  the 3D and VP1 regions across nine
+- [Supplementary Fig 06 and Fig 02B: Multiple sequence alignment for the
+  3D and VP1 regions across nine
   enteroviruses](09_multiple_sequence_alignment_of_nine_evs.md)
   - Rmd file:
     [09_multiple_sequence_alignment_of_nine_evs.Rmd](09_multiple_sequence_alignment_of_nine_evs.Rmd)
-- [Extended Data Table 5: Power analyses on both
+- [Supplementary Table 05: Power analyses on both
   cohorts](10_power_calculations.md)
   - Rmd file: [10_power_calculations.Rmd](10_power_calculations.Rmd)

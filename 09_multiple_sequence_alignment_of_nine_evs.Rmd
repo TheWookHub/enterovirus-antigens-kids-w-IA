@@ -20,7 +20,7 @@ Here we perform a multiple sequence alignment (MSA) of the same nine *Enteroviru
 
 This Rmd replicates:
 
-- Extended Data Fig. 6 | Full amino acid sequence alignments of the enriched regions of the VP1 and 3D regions of different EV species
+- Supplementary Fig. 6 | Full amino acid sequence alignments of the enriched regions of the VP1 and 3D regions of different EV species
 - Fig 2B | Zoomed in to the VP1 and 3D motifs
 
 Perform MSA with mafft v7.526 (2024/Apr/26) and read in alignment.
@@ -117,4 +117,4 @@ ggsave("figures/extended_data_fig_6.png", extended_data_fig_6, dpi = 300)
 ```
 
 
-**Extended Data Figure 6** Full amino acid sequence alignments of the enriched regions of the VP1 and 3D regions of different EV species. The genome polyprotein amino acid sequences of nine different EV species were aligned using BLASTP for comparison: CBV3, CVB1, CVB4, CVA9, CVA24, CVA21, RV-A1, RV-B14 and PV1. The full-length of enriched hotspots in the VP1 (A) and 3D (B) proteins in the VIGR and ENDIA *Enterovirus* antigen maps are represented. Conserved sequences in these full alignments were analysed further, those being the PALxAxETGxT motif in the VP1 region (A), and the PSVF motif in the 3D region (B). Sequences were coloured based on amino acid chemistry and sequence motifs showing amino acid conservation) were added to the top of every multiple sequence alignment, also coloured based on amino acid chemistry. Non-conserved sequences and amino acids (gaps) are represented by dashes (-) in the alignment. 
+**Supplementary Fig. 06** Full amino acid sequence alignments of the enriched regions of the VP1 and 3D regions of different EV species. The genome polyprotein amino acid sequences of nine different EV species were aligned using BLASTP for comparison: CBV3, CVB1, CVB4, CVA9, CVA24, CVA21, RV-A1, RV-B14 and PV1. The full-length of enriched hotspots in the VP1 (A) and 3D (B) proteins in the VIGR and ENDIA *Enterovirus* antigen maps are represented. Conserved sequences in these full alignments were analysed further, those being the PALxAxETGxT motif in the VP1 region (A), and the PSVF motif in the 3D region (B). Sequences were coloured based on amino acid chemistry and sequence motifs showing amino acid conservation) were added to the top of every multiple sequence alignment, also coloured based on amino acid chemistry. Non-conserved sequences and amino acids (gaps) are represented by dashes (-) in the alignment. 

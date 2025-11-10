@@ -19,7 +19,7 @@ due to how conserved these areas are.
 
 This Rmd replicates:
 
-- Extended Data Fig. 6 \| Full amino acid sequence alignments of the
+- Supplementary Fig. 6 \| Full amino acid sequence alignments of the
   enriched regions of the VP1 and 3D regions of different EV species
 - Fig 2B \| Zoomed in to the VP1 and 3D motifs
 
@@ -126,7 +126,7 @@ extended_data_fig_6
 
 ![](09_multiple_sequence_alignment_of_nine_evs_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
 
-**Extended Data Figure 6** Full amino acid sequence alignments of the
+**Supplementary Fig. 06** Full amino acid sequence alignments of the
 enriched regions of the VP1 and 3D regions of different EV species. The
 genome polyprotein amino acid sequences of nine different EV species
 were aligned using BLASTP for comparison: CBV3, CVB1, CVB4, CVA9, CVA24,

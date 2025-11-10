@@ -108,6 +108,10 @@ cohorts_sex_plot_same_yaxis_stacked <- wrap_elements(cohorts_sex_plot_same_y) +
 cohorts_sex_plot_same_yaxis_stacked
 ```
 
+**Supplementary Fig. 2B:** Sex stratification plot, for both cohorts, females are top plots and males are bottom plots - After stratification by sex, VIGR cohort (top) presented one group of 20 samples (females) and another of 22 (males), which were equally divided into males and females. In the ENDIA cohort (bottom), the female group was formed by 22 cases and 49 matching controls, and the male group consisted of 22 cases and 48 controls. The difference in the mean RPK and moving sums were re-calculated as described for previous plots after splitting both cohorts by sex. The VP1 region shows antibody enrichment in cases (red) only in males (bottom plots), while females (top plots) present an enrichment of the VP1 antigen in controls (blue), consistent in ENDIA and VIGR. Enrichments in the 3D region are observed for both males and females in both cohorts, consistent with the pattern seen in the non-stratified plot.
+
+
+
 ```{r, echo = FALSE}
 ggsave("figures/cohorts_sex_plot_same_yaxis_stacked.svg", plot = cohorts_sex_plot_same_yaxis_stacked, width = 11, height = 9, dpi = 300)
 ```

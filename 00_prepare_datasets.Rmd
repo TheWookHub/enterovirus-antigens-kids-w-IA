@@ -21,8 +21,9 @@ library(tidyverse)
 3. Join VirScan data to metadata and export dataset to `cache`
 
 ```{r}
-if(file.exists("cache/endia_virscan_metadata.rds")){
+if(all(file.exists(c("cache/endia_virscan_metadata.rds", "cache/endia_virscan_metadata_w_extra_ctrls.rds")))){
   endia_virscan_metadata <- read_rds("cache/endia_virscan_metadata.rds")
+  endia_virscan_metadata_w_controls_that_seroconverted <- read_rds("cache/endia_virscan_metadata_w_extra_ctrls.rds")
 } else {
   #1.
 endia_virscan_hits_counts_annot1_3 <- read_tsv("raw_data/virscan_hits_counts/phip11_plate1-3_v_kiwook_2_CDIVirScan_000_Hits_counts_annotated.tsv") %>% 

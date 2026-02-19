@@ -8,9 +8,15 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Enterovirus antigen landscape in children with islet autoimmunity
 
-This repository contains the code that was used in the analyses for the manuscript "Distinct enterovirus antigen landscape in children with islet autoimmunity", submitted as a Brief Report to the [Diabetes](https://diabetesjournals.org/diabetes) journal.
+<!-- badges: start -->
 
-This manuscript examines antigens identified by VirScan in two paediatric cohorts, Viruses In the Genetically at Risk (VIGR) and Environmental Determinants of Islet Autoimmunity (ENDIA).
+[![](https://img.shields.io/badge/10.2337/db25--0805-yellow.svg?label=https%3A%2F%2Fdoi.org%2F&labelColor=navy)](https://doi.org/10.2337/db25-0805)
+
+<!-- badges: end -->
+
+This repository contains the code that was used in the analyses for "Distinct enterovirus antigen landscape in children with islet autoimmunity", by [Delgado-Corrales & Fingerhut et al. 2026](https://doi.org/10.2337/db25-0805).
+
+This paper examined antigens identified by VirScan in two Australian paediatric cohorts, Viruses In the Genetically at Risk (VIGR) and Environmental Determinants of Islet Autoimmunity (ENDIA).
 
 ### ABSTRACT
 
